@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="ja" id="html-root">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>モバイルオーダー | 炭火亭</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand:#D32F2F; --brand-dark:#B71C1C; --brand-dim:rgba(211,47,47,.08);
+  --bg:#f5f5f5; --surface:#fff; --text:#1a1a1a; --text2:#666; --text3:#999;
+  --border:#e8e8e8; --green:#27ae60; --shadow:0 2px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.15); --r:12px; --r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;max-width:480px;margin:0 auto}
+button{cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* HEADER */
+.app-header{background:var(--brand);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:8px}
+.app-header-title{font-size:16px;font-weight:700;letter-spacing:.05em;flex:1;text-align:center}
+.app-header-back{background:none;border:none;color:white;font-size:22px;padding:4px;line-height:1;width:40px;flex-shrink:0}
+.app-header-cart{position:relative;background:none;border:none;color:white;font-size:22px;width:40px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end}
+.cart-badge{position:absolute;top:-4px;right:-4px;background:#f39c12;color:white;font-size:10px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+
+/* lang switcher in header */
+.lang-mini{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:white;font-size:10px;padding:3px 18px 3px 6px;border-radius:3px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;outline:none;flex-shrink:0}
+.lang-mini option{background:#333;color:#fff}
+.lang-mini-wrap{position:relative;flex-shrink:0}
+.lang-mini-wrap::after{content:'▾';position:absolute;right:4px;top:50%;transform:translateY(-50%);pointer-events:none;color:white;font-size:9px}
+
+/* SCREEN 1: 店舗選択 */
+.map-screen-body{flex:1;display:flex;flex-direction:column}
+.order-type-select{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
+.order-type-btn{padding:14px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;border-bottom:3px solid transparent;color:var(--text2);transition:all .2s;background:white;border-top:none;border-left:none;border-right:none}
+.order-type-btn.active{color:var(--brand);border-bottom-color:var(--brand)}
+.map-placeholder{height:240px;background:linear-gradient(135deg,#e8f4e8,#d4e8d4);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;overflow:hidden}
+.map-location-pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);font-size:32px;animation:pinBounce 1s ease-in-out infinite}
+@keyframes pinBounce{0%,100%{transform:translate(-50%,-100%)}50%{transform:translate(-50%,-110%)}}
+.stores-list-wrap{flex:1;overflow-y:auto;padding:12px}
+.stores-list-title{font-size:12px;color:var(--text2);padding:8px 4px;letter-spacing:.05em;font-weight:500}
+.store-card{background:white;border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;gap:14px;cursor:pointer;transition:all .15s;border:2px solid transparent}
+.store-card:active{transform:scale(.98)}
+.store-card.selected{border-color:var(--brand)}
+.store-card-icon{width:56px;height:56px;border-radius:10px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.store-card-info{flex:1}
+.store-card-name{font-weight:700;font-size:15px;margin-bottom:3px}
+.store-card-address{font-size:12px;color:var(--text2);margin-bottom:6px}
+.store-card-meta{display:flex;gap:10px;flex-wrap:wrap}
+.store-card-distance{font-size:12px;color:var(--brand);font-weight:600}
+.store-card-status{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+.store-card-status.open{background:rgba(39,174,96,.1);color:var(--green)}
+.store-card-status.paused{background:rgba(211,47,47,.1);color:var(--brand)}
+.select-store-btn{width:calc(100% - 24px);margin:0 12px 16px;padding:14px;background:var(--brand);color:white;border:none;border-radius:var(--r);font-size:15px;font-weight:700;letter-spacing:.05em;transition:background .2s}
+.select-store-btn:disabled{background:var(--text3)}
+
+/* SCREEN 2: メニュー */
+.menu-screen-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.category-tabs{display:flex;overflow-x:auto;padding:0 12px;gap:6px;background:white;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch}
+.category-tabs::-webkit-scrollbar{display:none}
+.cat-tab{padding:12px 16px;white-space:nowrap;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;flex-shrink:0}
+.cat-tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+.menu-list{flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch}
+.menu-item{background:white;border-radius:var(--r);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);display:flex;cursor:pointer;transition:all .15s;position:relative}
+.menu-item:active{transform:scale(.99)}
+.menu-item.sold-out{opacity:.5;pointer-events:none}
+.menu-item-img{width:100px;height:100px;background:linear-gradient(135deg,#2d1f0a,#8b6914);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0}
+.menu-item-body{flex:1;padding:12px 12px 12px 14px}
+.menu-item-name{font-weight:700;font-size:14px;margin-bottom:3px}
+.menu-item-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.menu-item-footer{display:flex;align-items:center;justify-content:space-between}
+.menu-item-price{font-weight:700;font-size:16px;color:var(--brand)}
+.menu-item-price .unit{font-size:11px;font-weight:400;color:var(--text3)}
+.menu-item-price .orig{font-size:11px;font-weight:400;color:var(--text3);text-decoration:line-through;margin-right:4px}
+.add-btn{width:32px;height:32px;border-radius:50%;background:var(--brand);color:white;border:none;font-size:20px;display:flex;align-items:center;justify-content:center}
+.sold-out-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.cart-bottom{padding:12px;background:white;border-top:1px solid var(--border);position:sticky;bottom:0}
+.cart-bottom-btn{width:100%;padding:14px;background:var(--brand);color:white;border:none;border-radius:var(--r);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.cart-bottom-btn:disabled{background:var(--text3)}
+.cart-count-badge{background:rgba(255,255,255,.3);padding:2px 8px;border-radius:10px;font-size:13px}
+
+/* OPTION MODAL */
+.option-modal{position:fixed;inset:0;z-index:200;display:none;flex-direction:column}
+.option-modal.open{display:flex}
+.option-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.option-sheet{position:relative;margin-top:auto;background:white;border-radius:20px 20px 0 0;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.option-sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto}
+.option-sheet-img{height:180px;background:linear-gradient(135deg,#2d1f0a,#8b6914);display:flex;align-items:center;justify-content:center;font-size:64px}
+.option-sheet-body{padding:20px}
+.option-sheet-name{font-size:20px;font-weight:700;margin-bottom:4px}
+.option-sheet-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:8px}
+.option-sheet-price{font-size:22px;font-weight:700;color:var(--brand);margin-bottom:20px}
+.option-group{margin-bottom:20px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.option-group-header{padding:12px 16px;background:#f9f9f9;border-bottom:1px solid var(--border)}
+.option-group-title{font-weight:700;font-size:14px}
+.option-group-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.req-badge{background:var(--brand);color:white;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px}
+.opt-badge{background:var(--green);color:white;padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px}
+.option-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.option-item:last-child{border-bottom:none}
+.option-item:active{background:var(--bg)}
+.option-item-control{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.option-item.checkbox .option-item-control{border-radius:4px}
+.option-item.selected .option-item-control{background:var(--brand);border-color:var(--brand)}
+.option-item.selected .option-item-control::after{content:'✓';color:white;font-size:12px;font-weight:700}
+.option-item-name{flex:1;font-size:14px}
+.option-item-price{font-size:13px;color:var(--brand);font-weight:600}
+.option-item-price.free{color:var(--text3)}
+.option-item-counter{display:flex;align-items:center;gap:10px}
+.counter-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)}
+.counter-btn.active{border-color:var(--brand);color:var(--brand)}
+.counter-val{font-size:15px;font-weight:700;min-width:20px;text-align:center}
+.counter-limit{font-size:11px;color:var(--text3);text-align:center;margin-top:4px}
+.qty-selector{display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--border);margin-top:8px}
+.qty-selector-label{font-size:14px;font-weight:600}
+.qty-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qty-btn.active{border-color:var(--brand);color:var(--brand)}
+.qty-val{font-size:20px;font-weight:700;min-width:28px;text-align:center}
+.add-to-cart-btn{width:100%;padding:15px;background:var(--brand);color:white;border:none;border-radius:var(--r);font-size:15px;font-weight:700;margin-top:16px;display:flex;align-items:center;justify-content:space-between}
+.add-to-cart-btn:disabled{background:var(--text3)}
+
+/* RECOMMEND */
+.recommend-screen-body{flex:1;overflow-y:auto;padding:16px}
+.recommend-title{font-size:18px;font-weight:700;text-align:center;margin-bottom:6px}
+.recommend-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:20px}
+.recommend-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.recommend-card{background:white;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:all .15s}
+.recommend-card:active{transform:scale(.97)}
+.recommend-card-img{height:100px;background:linear-gradient(135deg,#2d1f0a,#8b6914);display:flex;align-items:center;justify-content:center;font-size:36px}
+.recommend-card-body{padding:10px}
+.recommend-card-name{font-weight:700;font-size:13px;margin-bottom:4px}
+.recommend-card-price{font-size:14px;font-weight:700;color:var(--brand)}
+.recommend-add-btn{width:100%;padding:7px;background:var(--brand);color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;margin-top:6px}
+.skip-btn{width:100%;padding:13px;background:none;border:2px solid var(--border);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--text2)}
+
+/* CHECKOUT */
+.checkout-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:100px}
+.checkout-section{background:white;border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.checkout-section-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.checkout-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.checkout-row:last-child{border-bottom:none}
+.checkout-row-label{color:var(--text2)}
+.checkout-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid var(--text);margin-top:4px}
+.checkout-total-label{font-size:16px;font-weight:700}
+.checkout-total-price{font-size:22px;font-weight:700;color:var(--brand)}
+.checkout-discount{font-size:13px;color:var(--green);display:flex;justify-content:space-between;padding:6px 0}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.type-btn{padding:10px;text-align:center;border:2px solid var(--border);border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;background:none;color:var(--text2)}
+.type-btn.selected{border-color:var(--brand);background:var(--brand-dim);color:var(--brand)}
+.field-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:'Noto Sans JP',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:var(--bg)}
+.field-input:focus{border-color:var(--brand);background:white}
+.field-label{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:6px;letter-spacing:.05em;display:flex;justify-content:space-between}
+.payment-option{display:flex;align-items:center;padding:12px;border:2px solid var(--border);border-radius:var(--r-sm);cursor:pointer;margin-bottom:8px;transition:all .15s;gap:12px}
+.payment-option.selected{border-color:var(--brand);background:var(--brand-dim)}
+.payment-option-icon{font-size:24px}
+.payment-option-name{font-size:14px;font-weight:600}
+.coupon-row{display:flex;gap:8px}
+.coupon-input{flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:'Noto Sans JP',sans-serif;font-size:14px;outline:none}
+.coupon-btn{padding:10px 16px;background:var(--brand);color:white;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;white-space:nowrap}
+.order-item-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px}
+.order-item-row:last-child{border-bottom:none}
+.order-item-name{flex:1;font-weight:500}
+.order-item-qty{color:var(--text2);white-space:nowrap}
+.order-item-subtotal{font-weight:600;white-space:nowrap}
+.checkout-submit{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;padding:12px;background:white;border-top:1px solid var(--border)}
+.checkout-submit-btn{width:100%;padding:15px;background:var(--brand);color:white;border:none;border-radius:var(--r);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.checkout-submit-btn:disabled{background:var(--text3)}
+
+/* COMPLETE */
+.complete-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;text-align:center}
+.complete-icon{font-size:72px;margin-bottom:20px;animation:scaleIn .5s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes scaleIn{0%{transform:scale(0)}100%{transform:scale(1)}}
+.complete-number{font-size:72px;font-weight:700;color:var(--brand);font-family:'Cormorant Garamond',serif;line-height:1;margin:16px 0 8px}
+.complete-number-label{font-size:12px;color:var(--text2);letter-spacing:.15em}
+.complete-title{font-size:20px;font-weight:700;margin:20px 0 8px}
+.complete-sub{font-size:14px;color:var(--text2);line-height:1.8}
+.complete-wait{background:var(--brand-dim);border:1px solid rgba(211,47,47,.2);border-radius:var(--r);padding:16px;margin:20px 0;width:100%}
+.complete-wait-time{font-size:32px;font-weight:700;color:var(--brand);font-family:'Cormorant Garamond',serif}
+.complete-wait-label{font-size:12px;color:var(--text2)}
+.home-btn{width:100%;padding:14px;background:var(--brand);color:white;border:none;border-radius:var(--r);font-size:15px;font-weight:700;margin-top:24px}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:500;transition:transform .3s;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ===== SCREEN 1: 店舗選択 ===== -->
+<div class="screen active" id="screen-map">
+  <div class="app-header">
+    <span style="width:40px"></span>
+    <span class="app-header-title" data-i18n="header_order">モバイルオーダー</span>
+    <div class="lang-mini-wrap">
+      <select class="lang-mini" onchange="changeLang(this.value)">
+        <option value="ja">JP</option><option value="en">EN</option><option value="zh">中</option>
+        <option value="ko">한</option><option value="fr">FR</option><option value="it">IT</option><option value="id">ID</option>
+      </select>
+    </div>
+  </div>
+  <div class="map-screen-body">
+    <div class="order-type-select">
+      <button class="order-type-btn active" id="btn-takeout" onclick="setOrderType('takeout')" data-i18n="tab_takeout">🥡 テイクアウト</button>
+      <button class="order-type-btn" id="btn-delivery" onclick="setOrderType('delivery')" data-i18n="tab_delivery">🛵 デリバリー</button>
+    </div>
+    <div class="map-placeholder"><div class="map-location-pin">📍</div></div>
+    <div class="stores-list-wrap">
+      <div class="stores-list-title" data-i18n="nearby_stores">📍 近くの店舗</div>
+      <div id="stores-list"></div>
+    </div>
+    <button class="select-store-btn" id="select-store-btn" onclick="goToMenu()" disabled data-i18n="btn_select_store">この店舗で注文する →</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: メニュー ===== -->
+<div class="screen" id="screen-menu">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-map')">←</button>
+    <span class="app-header-title" id="menu-store-name"></span>
+    <button class="app-header-cart" onclick="goToRecommend()">
+      🛒<span class="cart-badge" id="cart-badge" style="display:none">0</span>
+    </button>
+  </div>
+  <div class="menu-screen-body">
+    <div class="category-tabs" id="category-tabs"></div>
+    <div class="menu-list" id="menu-list"></div>
+    <div class="cart-bottom">
+      <button class="cart-bottom-btn" id="cart-btn" onclick="goToRecommend()" disabled>
+        <span data-i18n="btn_view_cart">カートを見る</span>
+        <span class="cart-count-badge" id="cart-count-badge">0点 ¥0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== オプションモーダル ===== -->
+<div class="option-modal" id="option-modal">
+  <div class="option-overlay" onclick="closeOptionModal()"></div>
+  <div class="option-sheet">
+    <div class="option-sheet-handle"></div>
+    <div class="option-sheet-img" id="opt-img"></div>
+    <div class="option-sheet-body">
+      <div class="option-sheet-name" id="opt-name"></div>
+      <div class="option-sheet-desc" id="opt-desc"></div>
+      <div class="option-sheet-price" id="opt-price"></div>
+      <div id="option-groups"></div>
+      <div class="qty-selector">
+        <span class="qty-selector-label" data-i18n="qty_label">数量</span>
+        <button class="qty-btn" onclick="changeQty(-1)">－</button>
+        <span class="qty-val" id="opt-qty">1</span>
+        <button class="qty-btn active" onclick="changeQty(1)">＋</button>
+      </div>
+      <button class="add-to-cart-btn" id="add-to-cart-btn" onclick="addToCart()">
+        <span data-i18n="btn_add_cart">カートに追加</span>
+        <span id="add-btn-price">¥0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: レコメンド ===== -->
+<div class="screen" id="screen-recommend">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-menu')">←</button>
+    <span class="app-header-title" data-i18n="header_recommend">追加でいかがですか？</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="recommend-screen-body">
+    <div class="recommend-title" data-i18n="recommend_title">🎉 カートに追加しました！</div>
+    <div class="recommend-sub" data-i18n="recommend_sub">一緒にいかがですか？</div>
+    <div class="recommend-grid" id="recommend-grid"></div>
+    <button class="skip-btn" onclick="goToCheckout()" data-i18n="btn_skip">このまま注文へ進む →</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: 決済 ===== -->
+<div class="screen" id="screen-checkout">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-recommend')">←</button>
+    <span class="app-header-title" data-i18n="header_checkout">ご注文内容の確認</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="checkout-body">
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_type_title">🥡 注文区別</div>
+      <div class="type-toggle">
+        <button class="type-btn selected" id="co-takeout" onclick="selectOrderType('takeout')" data-i18n="tab_takeout">🥡 テイクアウト</button>
+        <button class="type-btn" id="co-delivery" onclick="selectOrderType('delivery')" data-i18n="tab_delivery">🛵 デリバリー</button>
+      </div>
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_time_title">🕐 受け取り希望時間</div>
+      <div class="field-label" data-i18n="co_time_label">ご希望の受け取り時間</div>
+      <select class="field-input" id="pickup-time">
+        <option value="" data-i18n="time_asap">できるだけ早く</option>
+        <option data-i18n="time_15">15分後</option>
+        <option data-i18n="time_30">30分後</option>
+        <option data-i18n="time_45">45分後</option>
+        <option data-i18n="time_60">1時間後</option>
+      </select>
+    </div>
+
+    <div class="checkout-section" id="delivery-section" style="display:none">
+      <div class="checkout-section-title" data-i18n="co_delivery_title">🛵 デリバリー設定</div>
+      <div class="field-label" style="margin-bottom:8px" data-i18n="co_delivery_type">配達タイプ</div>
+      <div class="type-toggle" style="margin-bottom:14px">
+        <button class="type-btn selected" onclick="selectDeliveryType('immediate',this)" data-i18n="delivery_now">⚡ 即時配達</button>
+        <button class="type-btn" onclick="selectDeliveryType('scheduled',this)" data-i18n="delivery_scheduled">📅 予約注文</button>
+      </div>
+      <div id="scheduled-section" style="display:none">
+        <div class="field-label" data-i18n="delivery_datetime">配達希望日時</div>
+        <input type="datetime-local" class="field-input">
+      </div>
+      <div class="field-label" style="margin-top:12px" data-i18n="delivery_address">配達先住所</div>
+      <input type="text" class="field-input" data-i18n-placeholder="delivery_address_ph">
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_request_title">💬 お店へのリクエスト</div>
+      <textarea class="field-input" rows="3" data-i18n-placeholder="co_request_ph" style="resize:none"></textarea>
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_payment_title">💳 お支払い方法</div>
+      <div id="payment-options"></div>
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_coupon_title">🎟️ クーポンコード</div>
+      <div class="coupon-row">
+        <input class="coupon-input" type="text" id="coupon-input" data-i18n-placeholder="coupon_ph">
+        <button class="coupon-btn" onclick="applyCoupon()" data-i18n="btn_apply">適用</button>
+      </div>
+      <div id="coupon-result" style="font-size:13px;margin-top:8px"></div>
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title" data-i18n="co_items_title">🧾 ご注文内容</div>
+      <div id="order-items-detail"></div>
+      <div style="margin-top:8px" id="discount-rows"></div>
+      <div class="checkout-total-row">
+        <span class="checkout-total-label" data-i18n="co_total">合計金額</span>
+        <span class="checkout-total-price" id="total-price">¥0</span>
+      </div>
+    </div>
+
+  </div>
+  <div class="checkout-submit">
+    <button class="checkout-submit-btn" onclick="submitOrder()">
+      <span data-i18n="btn_submit">決済を確定する</span>
+      <span id="submit-price">¥0</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 5: 完了 ===== -->
+<div class="screen" id="screen-complete">
+  <div class="app-header">
+    <span style="width:40px"></span>
+    <span class="app-header-title" data-i18n="header_complete">ご注文完了</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="complete-body">
+    <div class="complete-icon">🎉</div>
+    <div class="complete-number-label" data-i18n="order_number_label">受け取り番号</div>
+    <div class="complete-number" id="order-number">42</div>
+    <div class="complete-title" data-i18n="complete_title">ご注文ありがとうございます！</div>
+    <div class="complete-sub" id="complete-sub-text"></div>
+    <div class="complete-wait">
+      <div class="complete-wait-label" data-i18n="wait_label">お待ち時間の目安</div>
+      <div class="complete-wait-time" data-i18n="wait_time">約15分</div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8" data-i18n="complete_note">ご注文内容はメールでもお送りします。<br>ご不明な点はスタッフにお申し付けください。</div>
+    <button class="home-btn" onclick="goHome()" data-i18n="btn_home">トップに戻る</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================
+   BRAND CONFIG（ブランドサイトと共通）
+   ===================================================== */
+var BRAND_CONFIG = {
+  primaryColor:'#D32F2F', primaryDark:'#B71C1C',
+  logoMarkEmoji:'🔥', name:'炭火亭'
+};
+
+/* =====================================================
+   i18n 辞書（7言語）
+   ===================================================== */
+var I18N = {
+  ja:{
+    header_order:'モバイルオーダー', tab_takeout:'🥡 テイクアウト', tab_delivery:'🛵 デリバリー',
+    nearby_stores:'📍 近くの店舗', btn_select_store:'この店舗で注文する →',
+    status_open:'受付中', status_paused:'一時停止中', status_closed:'受付終了',
+    no_store:'この注文タイプに対応した店舗がありません',
+    btn_view_cart:'カートを見る', cat_all:'すべて',
+    qty_label:'数量', btn_add_cart:'カートに追加',
+    header_recommend:'追加でいかがですか？', recommend_title:'🎉 カートに追加しました！',
+    recommend_sub:'一緒にいかがですか？', btn_skip:'このまま注文へ進む →',
+    btn_quick_add:'＋ 追加する', btn_added:'✓ 追加済み',
+    header_checkout:'ご注文内容の確認',
+    co_type_title:'🥡 注文区別', co_time_title:'🕐 受け取り希望時間', co_time_label:'ご希望の受け取り時間',
+    time_asap:'できるだけ早く', time_15:'15分後', time_30:'30分後', time_45:'45分後', time_60:'1時間後',
+    co_delivery_title:'🛵 デリバリー設定', co_delivery_type:'配達タイプ',
+    delivery_now:'⚡ 即時配達', delivery_scheduled:'📅 予約注文',
+    delivery_datetime:'配達希望日時', delivery_address:'配達先住所',
+    delivery_address_ph:'東京都渋谷区〇〇1-2-3',
+    co_request_title:'💬 お店へのリクエスト',
+    co_request_ph:'アレルギーや調理のご要望などご自由にお書きください。',
+    co_payment_title:'💳 お支払い方法',
+    co_coupon_title:'🎟️ クーポンコード', coupon_ph:'クーポンコードを入力',
+    btn_apply:'適用', coupon_ok:'が適用されました', coupon_ng:'❌ クーポンが見つかりません',
+    co_items_title:'🧾 ご注文内容', co_total:'合計金額', btn_submit:'決済を確定する',
+    processing:'処理中...', header_complete:'ご注文完了',
+    order_number_label:'受け取り番号', complete_title:'ご注文ありがとうございます！',
+    complete_sub_takeout:'番号をお呼びしたらカウンターへお越しください。',
+    complete_sub_delivery:'ドライバーが配達に向かっています。',
+    wait_label:'お待ち時間の目安', wait_time:'約15分',
+    complete_note:'ご注文内容はメールでもお送りします。\nご不明な点はスタッフにお申し付けください。',
+    btn_home:'トップに戻る',
+    toast_added:'✅ カートに追加しました', toast_paused:'⚠️ この店舗は現在受付を停止しています',
+    toast_max:'⚠️ 最大%d個まで選択できます',
+    opt_required:'必須', opt_optional:'任意', opt_free:'無料', opt_sold_out:'品切れ',
+    opt_select_type:'選択式', opt_tax_incl:'税込¥%s',
+    pay_card:'クレジットカード',
+  },
+  en:{
+    header_order:'Mobile Order', tab_takeout:'🥡 Takeout', tab_delivery:'🛵 Delivery',
+    nearby_stores:'📍 Nearby Stores', btn_select_store:'Order from this store →',
+    status_open:'Open', status_paused:'Paused', status_closed:'Closed',
+    no_store:'No stores available for this order type',
+    btn_view_cart:'View Cart', cat_all:'All',
+    qty_label:'Qty', btn_add_cart:'Add to Cart',
+    header_recommend:'Would you like to add more?', recommend_title:'🎉 Added to cart!',
+    recommend_sub:'How about these?', btn_skip:'Proceed to checkout →',
+    btn_quick_add:'＋ Add', btn_added:'✓ Added',
+    header_checkout:'Order Summary',
+    co_type_title:'🥡 Order Type', co_time_title:'🕐 Pickup Time', co_time_label:'Preferred pickup time',
+    time_asap:'As soon as possible', time_15:'In 15 min', time_30:'In 30 min', time_45:'In 45 min', time_60:'In 1 hour',
+    co_delivery_title:'🛵 Delivery Settings', co_delivery_type:'Delivery Type',
+    delivery_now:'⚡ ASAP', delivery_scheduled:'📅 Scheduled',
+    delivery_datetime:'Delivery date & time', delivery_address:'Delivery address',
+    delivery_address_ph:'Enter your delivery address',
+    co_request_title:'💬 Special Requests',
+    co_request_ph:'Allergies, special instructions, etc.',
+    co_payment_title:'💳 Payment Method',
+    co_coupon_title:'🎟️ Coupon Code', coupon_ph:'Enter coupon code',
+    btn_apply:'Apply', coupon_ok:'applied', coupon_ng:'❌ Coupon not found',
+    co_items_title:'🧾 Your Order', co_total:'Total', btn_submit:'Confirm & Pay',
+    processing:'Processing...', header_complete:'Order Complete',
+    order_number_label:'Pickup Number', complete_title:'Thank you for your order!',
+    complete_sub_takeout:'We\'ll call your number when your order is ready.',
+    complete_sub_delivery:'Your driver is on the way.',
+    wait_label:'Estimated wait time', wait_time:'Approx. 15 min',
+    complete_note:'A confirmation email has been sent.\nPlease ask staff if you have any questions.',
+    btn_home:'Back to Top',
+    toast_added:'✅ Added to cart', toast_paused:'⚠️ This store is temporarily unavailable',
+    toast_max:'⚠️ Max %d items',
+    opt_required:'Required', opt_optional:'Optional', opt_free:'Free', opt_sold_out:'Sold Out',
+    opt_select_type:'Build your own', opt_tax_incl:'incl. tax ¥%s',
+    pay_card:'Credit Card',
+  },
+  zh:{
+    header_order:'移动点单', tab_takeout:'🥡 外带', tab_delivery:'🛵 外送',
+    nearby_stores:'📍 附近门店', btn_select_store:'在此门店点单 →',
+    status_open:'接单中', status_paused:'暂停接单', status_closed:'已停止接单',
+    no_store:'没有支持此订单类型的门店',
+    btn_view_cart:'查看购物车', cat_all:'全部',
+    qty_label:'数量', btn_add_cart:'加入购物车',
+    header_recommend:'还要加点什么吗？', recommend_title:'🎉 已加入购物车！',
+    recommend_sub:'一起来一份？', btn_skip:'直接去结账 →',
+    btn_quick_add:'＋ 添加', btn_added:'✓ 已添加',
+    header_checkout:'确认订单',
+    co_type_title:'🥡 订单类型', co_time_title:'🕐 取餐时间', co_time_label:'期望取餐时间',
+    time_asap:'尽快', time_15:'15分钟后', time_30:'30分钟后', time_45:'45分钟后', time_60:'1小时后',
+    co_delivery_title:'🛵 外送设置', co_delivery_type:'配送类型',
+    delivery_now:'⚡ 立即配送', delivery_scheduled:'📅 预约配送',
+    delivery_datetime:'配送日期时间', delivery_address:'配送地址',
+    delivery_address_ph:'请输入配送地址',
+    co_request_title:'💬 特别要求',
+    co_request_ph:'过敏信息或特殊烹饪要求等。',
+    co_payment_title:'💳 支付方式',
+    co_coupon_title:'🎟️ 优惠券', coupon_ph:'输入优惠券代码',
+    btn_apply:'使用', coupon_ok:'已使用', coupon_ng:'❌ 未找到优惠券',
+    co_items_title:'🧾 订单详情', co_total:'总金额', btn_submit:'确认支付',
+    processing:'处理中...', header_complete:'订单完成',
+    order_number_label:'取餐号码', complete_title:'感谢您的点单！',
+    complete_sub_takeout:'叫到您的号码时请到柜台取餐。',
+    complete_sub_delivery:'配送员正在前往。',
+    wait_label:'预计等待时间', wait_time:'约15分钟',
+    complete_note:'订单确认邮件已发送。\n如有疑问请联系工作人员。',
+    btn_home:'返回首页',
+    toast_added:'✅ 已加入购物车', toast_paused:'⚠️ 该门店暂时停止接单',
+    toast_max:'⚠️ 最多选%d个',
+    opt_required:'必选', opt_optional:'可选', opt_free:'免费', opt_sold_out:'售罄',
+    opt_select_type:'自选式', opt_tax_incl:'含税¥%s',
+    pay_card:'信用卡',
+  },
+  ko:{
+    header_order:'모바일 주문', tab_takeout:'🥡 포장', tab_delivery:'🛵 배달',
+    nearby_stores:'📍 근처 매장', btn_select_store:'이 매장에서 주문하기 →',
+    status_open:'주문 가능', status_paused:'일시 중단', status_closed:'마감',
+    no_store:'이 주문 유형에 맞는 매장이 없습니다',
+    btn_view_cart:'장바구니 보기', cat_all:'전체',
+    qty_label:'수량', btn_add_cart:'장바구니에 추가',
+    header_recommend:'추가로 더 주문하시겠어요?', recommend_title:'🎉 장바구니에 추가되었습니다!',
+    recommend_sub:'함께 드시겠어요?', btn_skip:'주문하러 가기 →',
+    btn_quick_add:'＋ 추가', btn_added:'✓ 추가됨',
+    header_checkout:'주문 확인',
+    co_type_title:'🥡 주문 유형', co_time_title:'🕐 수령 시간', co_time_label:'원하는 수령 시간',
+    time_asap:'최대한 빨리', time_15:'15분 후', time_30:'30분 후', time_45:'45분 후', time_60:'1시간 후',
+    co_delivery_title:'🛵 배달 설정', co_delivery_type:'배달 유형',
+    delivery_now:'⚡ 즉시 배달', delivery_scheduled:'📅 예약 배달',
+    delivery_datetime:'배달 날짜/시간', delivery_address:'배달 주소',
+    delivery_address_ph:'배달 주소를 입력하세요',
+    co_request_title:'💬 특별 요청',
+    co_request_ph:'알레르기나 조리 관련 요청사항을 입력해 주세요.',
+    co_payment_title:'💳 결제 방법',
+    co_coupon_title:'🎟️ 쿠폰 코드', coupon_ph:'쿠폰 코드 입력',
+    btn_apply:'적용', coupon_ok:'적용됨', coupon_ng:'❌ 쿠폰을 찾을 수 없습니다',
+    co_items_title:'🧾 주문 내용', co_total:'합계 금액', btn_submit:'결제 확정',
+    processing:'처리 중...', header_complete:'주문 완료',
+    order_number_label:'수령 번호', complete_title:'주문해 주셔서 감사합니다!',
+    complete_sub_takeout:'번호를 부르면 카운터로 와 주세요.',
+    complete_sub_delivery:'배달원이 출발했습니다.',
+    wait_label:'예상 대기 시간', wait_time:'약 15분',
+    complete_note:'주문 확인 이메일이 전송되었습니다.\n궁금한 점은 직원에게 문의해 주세요.',
+    btn_home:'홈으로 돌아가기',
+    toast_added:'✅ 장바구니에 추가되었습니다', toast_paused:'⚠️ 이 매장은 현재 주문을 받지 않습니다',
+    toast_max:'⚠️ 최대 %d개까지 선택 가능합니다',
+    opt_required:'필수', opt_optional:'선택', opt_free:'무료', opt_sold_out:'품절',
+    opt_select_type:'선택식', opt_tax_incl:'세금포함 ¥%s',
+    pay_card:'신용카드',
+  },
+  fr:{
+    header_order:'Commande Mobile', tab_takeout:'🥡 À emporter', tab_delivery:'🛵 Livraison',
+    nearby_stores:'📍 Restaurants proches', btn_select_store:'Commander ici →',
+    status_open:'Ouvert', status_paused:'Suspendu', status_closed:'Fermé',
+    no_store:'Aucun restaurant disponible pour ce type de commande',
+    btn_view_cart:'Voir le panier', cat_all:'Tout',
+    qty_label:'Qté', btn_add_cart:'Ajouter au panier',
+    header_recommend:'Ajouter quelque chose?', recommend_title:'🎉 Ajouté au panier!',
+    recommend_sub:'Que diriez-vous de...?', btn_skip:'Passer à la caisse →',
+    btn_quick_add:'＋ Ajouter', btn_added:'✓ Ajouté',
+    header_checkout:'Récapitulatif',
+    co_type_title:'🥡 Type de commande', co_time_title:'🕐 Heure de récupération', co_time_label:'Heure souhaitée',
+    time_asap:'Le plus tôt possible', time_15:'Dans 15 min', time_30:'Dans 30 min', time_45:'Dans 45 min', time_60:'Dans 1h',
+    co_delivery_title:'🛵 Options livraison', co_delivery_type:'Type de livraison',
+    delivery_now:'⚡ Dès que possible', delivery_scheduled:'📅 Programmée',
+    delivery_datetime:'Date et heure', delivery_address:'Adresse de livraison',
+    delivery_address_ph:'Entrez votre adresse de livraison',
+    co_request_title:'💬 Demandes spéciales',
+    co_request_ph:'Allergies, instructions spéciales, etc.',
+    co_payment_title:'💳 Mode de paiement',
+    co_coupon_title:'🎟️ Code promo', coupon_ph:'Entrez le code promo',
+    btn_apply:'Appliquer', coupon_ok:'appliqué', coupon_ng:'❌ Code introuvable',
+    co_items_title:'🧾 Votre commande', co_total:'Total', btn_submit:'Confirmer & Payer',
+    processing:'Traitement...', header_complete:'Commande confirmée',
+    order_number_label:'Numéro de retrait', complete_title:'Merci pour votre commande!',
+    complete_sub_takeout:'Nous vous appellerons quand votre commande sera prête.',
+    complete_sub_delivery:'Votre livreur est en route.',
+    wait_label:'Temps d\'attente estimé', wait_time:'Env. 15 min',
+    complete_note:'Un email de confirmation a été envoyé.\nContactez le personnel si vous avez des questions.',
+    btn_home:'Retour à l\'accueil',
+    toast_added:'✅ Ajouté au panier', toast_paused:'⚠️ Ce restaurant est temporairement indisponible',
+    toast_max:'⚠️ Maximum %d articles',
+    opt_required:'Requis', opt_optional:'Optionnel', opt_free:'Gratuit', opt_sold_out:'Épuisé',
+    opt_select_type:'Personnalisable', opt_tax_incl:'TTC ¥%s',
+    pay_card:'Carte de crédit',
+  },
+  it:{
+    header_order:'Ordine Mobile', tab_takeout:'🥡 Asporto', tab_delivery:'🛵 Consegna',
+    nearby_stores:'📍 Ristoranti vicini', btn_select_store:'Ordina da qui →',
+    status_open:'Aperto', status_paused:'In pausa', status_closed:'Chiuso',
+    no_store:'Nessun ristorante disponibile per questo tipo di ordine',
+    btn_view_cart:'Vedi carrello', cat_all:'Tutto',
+    qty_label:'Qtà', btn_add_cart:'Aggiungi al carrello',
+    header_recommend:'Aggiungere qualcosa?', recommend_title:'🎉 Aggiunto al carrello!',
+    recommend_sub:'Cosa ne dici di...?', btn_skip:'Vai al pagamento →',
+    btn_quick_add:'＋ Aggiungi', btn_added:'✓ Aggiunto',
+    header_checkout:'Riepilogo ordine',
+    co_type_title:'🥡 Tipo ordine', co_time_title:'🕐 Orario ritiro', co_time_label:'Orario preferito',
+    time_asap:'Prima possibile', time_15:'Tra 15 min', time_30:'Tra 30 min', time_45:'Tra 45 min', time_60:'Tra 1h',
+    co_delivery_title:'🛵 Impostazioni consegna', co_delivery_type:'Tipo consegna',
+    delivery_now:'⚡ Subito', delivery_scheduled:'📅 Programmato',
+    delivery_datetime:'Data e ora', delivery_address:'Indirizzo di consegna',
+    delivery_address_ph:'Inserisci il tuo indirizzo',
+    co_request_title:'💬 Richieste speciali',
+    co_request_ph:'Allergie, istruzioni speciali, ecc.',
+    co_payment_title:'💳 Metodo di pagamento',
+    co_coupon_title:'🎟️ Codice sconto', coupon_ph:'Inserisci codice sconto',
+    btn_apply:'Applica', coupon_ok:'applicato', coupon_ng:'❌ Codice non trovato',
+    co_items_title:'🧾 Il tuo ordine', co_total:'Totale', btn_submit:'Conferma e Paga',
+    processing:'Elaborazione...', header_complete:'Ordine completato',
+    order_number_label:'Numero ritiro', complete_title:'Grazie per il tuo ordine!',
+    complete_sub_takeout:'Ti chiameremo quando il tuo ordine è pronto.',
+    complete_sub_delivery:'Il tuo corriere è in arrivo.',
+    wait_label:'Tempo di attesa stimato', wait_time:'Circa 15 min',
+    complete_note:'Email di conferma inviata.\nContatta il personale per qualsiasi domanda.',
+    btn_home:'Torna alla home',
+    toast_added:'✅ Aggiunto al carrello', toast_paused:'⚠️ Questo ristorante è temporaneamente non disponibile',
+    toast_max:'⚠️ Massimo %d articoli',
+    opt_required:'Obbligatorio', opt_optional:'Opzionale', opt_free:'Gratuito', opt_sold_out:'Esaurito',
+    opt_select_type:'Personalizzabile', opt_tax_incl:'IVA incl. ¥%s',
+    pay_card:'Carta di credito',
+  },
+  id:{
+    header_order:'Pesan Mobile', tab_takeout:'🥡 Bawa Pulang', tab_delivery:'🛵 Pesan Antar',
+    nearby_stores:'📍 Restoran Terdekat', btn_select_store:'Pesan di sini →',
+    status_open:'Buka', status_paused:'Dijeda', status_closed:'Tutup',
+    no_store:'Tidak ada restoran untuk jenis pesanan ini',
+    btn_view_cart:'Lihat Keranjang', cat_all:'Semua',
+    qty_label:'Jml', btn_add_cart:'Tambah ke Keranjang',
+    header_recommend:'Tambah lagi?', recommend_title:'🎉 Ditambahkan ke keranjang!',
+    recommend_sub:'Bagaimana dengan ini?', btn_skip:'Lanjut ke kasir →',
+    btn_quick_add:'＋ Tambah', btn_added:'✓ Ditambahkan',
+    header_checkout:'Ringkasan Pesanan',
+    co_type_title:'🥡 Jenis Pesanan', co_time_title:'🕐 Waktu Ambil', co_time_label:'Waktu ambil yang diinginkan',
+    time_asap:'Sesegera mungkin', time_15:'15 menit lagi', time_30:'30 menit lagi', time_45:'45 menit lagi', time_60:'1 jam lagi',
+    co_delivery_title:'🛵 Pengaturan Antar', co_delivery_type:'Jenis Pengiriman',
+    delivery_now:'⚡ Segera', delivery_scheduled:'📅 Terjadwal',
+    delivery_datetime:'Tanggal & waktu', delivery_address:'Alamat pengiriman',
+    delivery_address_ph:'Masukkan alamat pengiriman Anda',
+    co_request_title:'💬 Permintaan Khusus',
+    co_request_ph:'Alergi, instruksi khusus, dll.',
+    co_payment_title:'💳 Metode Pembayaran',
+    co_coupon_title:'🎟️ Kode Kupon', coupon_ph:'Masukkan kode kupon',
+    btn_apply:'Terapkan', coupon_ok:'diterapkan', coupon_ng:'❌ Kupon tidak ditemukan',
+    co_items_title:'🧾 Pesanan Anda', co_total:'Total', btn_submit:'Konfirmasi & Bayar',
+    processing:'Memproses...', header_complete:'Pesanan Selesai',
+    order_number_label:'Nomor Ambil', complete_title:'Terima kasih atas pesanan Anda!',
+    complete_sub_takeout:'Kami akan memanggil nomor Anda saat pesanan siap.',
+    complete_sub_delivery:'Pengemudi sedang dalam perjalanan.',
+    wait_label:'Estimasi waktu tunggu', wait_time:'Sekitar 15 menit',
+    complete_note:'Email konfirmasi telah dikirim.\nHubungi staf jika ada pertanyaan.',
+    btn_home:'Kembali ke Beranda',
+    toast_added:'✅ Ditambahkan ke keranjang', toast_paused:'⚠️ Restoran ini sedang tidak tersedia',
+    toast_max:'⚠️ Maksimal %d item',
+    opt_required:'Wajib', opt_optional:'Opsional', opt_free:'Gratis', opt_sold_out:'Habis',
+    opt_select_type:'Pilih sendiri', opt_tax_incl:'termasuk pajak ¥%s',
+    pay_card:'Kartu Kredit',
+  }
+};
+
+/* =====================================================
+   STORES / MENU DATA
+   ===================================================== */
+var STORES = [
+  {id:'s1', name:'焼肉 炭火亭 渋谷店', address:'東京都渋谷区恵比寿1-2-3', distance:0.3, hasTakeout:true,  hasDelivery:true,  emoji:'🔥', paused:false},
+  {id:'s2', name:'焼肉 炭火亭 新宿店',  address:'東京都新宿区新宿3-4-5',   distance:1.8, hasTakeout:true,  hasDelivery:false, emoji:'🔥', paused:false},
+  {id:'s3', name:'焼肉 炭火亭 池袋店',  address:'東京都豊島区池袋2-3-4',   distance:3.2, hasTakeout:true,  hasDelivery:false, emoji:'🔥', paused:true}
+];
+
+var MENU_ITEMS = [
+  {id:'m1', name:'黒毛和牛 特上カルビ', desc:'A5ランク黒毛和牛の霜降りカルビ。とろけるような脂と旨みが自慢の一品です。', price:2800, tax:10, category:'焼肉', emoji:'🥩', soldOut:false, popular:true,
+    options:[
+      {id:'o1', title:'焼き加減', type:'radio', required:true, min:1, max:1, items:[
+        {id:'oi1',name:'レア',price:0},{id:'oi2',name:'ミディアムレア',price:0},{id:'oi3',name:'ウェルダン',price:0}]},
+      {id:'o2', title:'トッピング', type:'checkbox', required:false, min:0, max:3, items:[
+        {id:'oi4',name:'ガーリックバター',price:200},{id:'oi5',name:'卵黄',price:100},{id:'oi6',name:'わさび',price:0}]}]},
+  {id:'m2', name:'石焼きビビンバ', desc:'熱々の石鍋でパリパリに仕上げたビビンバ。', price:900, tax:8, category:'ご飯もの', emoji:'🍚', soldOut:false, popular:true,
+    options:[
+      {id:'o3', title:'辛さ', type:'radio', required:true, min:1, max:1, items:[
+        {id:'oi7',name:'辛さなし',price:0},{id:'oi8',name:'普通',price:0},{id:'oi9',name:'辛め',price:0}]}]},
+  {id:'m3', name:'おでん盛り合わせ', desc:'好きな具材を選んでオリジナル盛り合わせを。', price:0, tax:8, category:'おでん', emoji:'🍢', soldOut:false, popular:false,
+    options:[
+      {id:'o4', title:'具材を選んでください', type:'counter', required:true, minTotal:3, maxTotal:10, items:[
+        {id:'oi10',name:'大根',price:180},{id:'oi11',name:'はんぺん',price:150},{id:'oi12',name:'たまご',price:120},
+        {id:'oi13',name:'白滝',price:100},{id:'oi14',name:'牛すじ',price:250},{id:'oi15',name:'こんにゃく',price:100}]}]},
+  {id:'m4', name:'ユッケジャンスープ', desc:'旨辛の本格スープ。体の芯から温まります。', price:680, tax:10, category:'スープ', emoji:'🍲', soldOut:false, popular:true, options:[]},
+  {id:'m5', name:'特上タン塩', desc:'厚切りで旨味濃厚な特上タン。', price:1800, tax:10, category:'焼肉', emoji:'🥩', soldOut:true, popular:false, options:[]},
+  {id:'m6', name:'カルビクッパ', desc:'ほろほろのカルビが入った旨みたっぷりクッパ。', price:780, tax:8, category:'ご飯もの', emoji:'🍜', soldOut:false, popular:true, options:[]}
+];
+
+var PAYMENT_METHODS = [
+  {id:'card', nameKey:'pay_card', icon:'💳'},
+  {id:'apple_pay', name:'Apple Pay', icon:'🍎'},
+  {id:'google_pay', name:'Google Pay', icon:'🟢'},
+  {id:'paypay', name:'PayPay', icon:'🔴'}
+];
+
+/* =====================================================
+   STATE
+   ===================================================== */
+var currentLang = 'ja';
+var orderType = 'takeout';
+var selectedStore = null;
+var cart = [];
+var currentItem = null;
+var currentOptions = {};
+var currentQty = 1;
+var selectedPayment = 'card';
+var appliedCoupon = null;
+var discount = 0;
+
+/* =====================================================
+   i18n
+   ===================================================== */
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key] !== undefined)
+    ? I18N[currentLang][key] : (I18N.ja[key] || key);
+}
+function changeLang(lang) {
+  if (!I18N[lang]) return;
+  currentLang = lang;
+  document.getElementById('html-root').lang = lang;
+  // data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n');
+    var v = t(k);
+    if (el.tagName === 'OPTION') el.textContent = v;
+    else el.innerHTML = v.replace(/\n/g,'<br>');
+  });
+  // data-i18n-placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  // 動的再描画
+  renderStores();
+  renderPaymentOptions();
+}
+
+/* =====================================================
+   BRAND CONFIG 適用
+   ===================================================== */
+function applyBrand() {
+  var c = BRAND_CONFIG, r = document.documentElement;
+  r.style.setProperty('--brand', c.primaryColor);
+  r.style.setProperty('--brand-dark', c.primaryDark);
+  r.style.setProperty('--brand-dim', 'rgba(' + hexToRgb(c.primaryColor) + ',.08)');
+}
+function hexToRgb(hex) {
+  var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return r + ',' + g + ',' + b;
+}
+
+/* =====================================================
+   URLパラメータ → 初期タブ設定
+   ===================================================== */
+function initFromUrl() {
+  var params = new URLSearchParams(window.location.search);
+  var mode = params.get('mode');
+  if (mode === 'delivery') {
+    setOrderType('delivery');
+  } else {
+    setOrderType('takeout');
+  }
+}
+
+/* =====================================================
+   STORE LIST
+   ===================================================== */
+function setOrderType(type) {
+  orderType = type;
+  document.getElementById('btn-takeout').classList.toggle('active', type === 'takeout');
+  document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
+  renderStores();
+}
+
+function renderStores() {
+  var list = STORES.filter(function(s) {
+    return orderType === 'takeout' ? s.hasTakeout : s.hasDelivery;
+  });
+  var html = list.map(function(s) {
+    var statusKey = s.paused ? 'status_paused' : 'status_open';
+    var statusCls = s.paused ? 'paused' : 'open';
+    return '<div class="store-card'+(selectedStore&&selectedStore.id===s.id?' selected':'')+'" onclick="selectStore(\''+s.id+'\')">'+
+      '<div class="store-card-icon">'+s.emoji+'</div>'+
+      '<div class="store-card-info">'+
+      '<div class="store-card-name">'+s.name+'</div>'+
+      '<div class="store-card-address">'+s.address+'</div>'+
+      '<div class="store-card-meta">'+
+      '<span class="store-card-distance">📍 '+s.distance+'km</span>'+
+      '<span class="store-card-status '+statusCls+'">'+t(statusKey)+'</span>'+
+      '</div></div></div>';
+  }).join('') || '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">'+t('no_store')+'</div>';
+  document.getElementById('stores-list').innerHTML = html;
+}
+
+function selectStore(id) {
+  var store = STORES.find(function(s){return s.id===id;});
+  if (store.paused) { showToast(t('toast_paused')); return; }
+  selectedStore = store;
+  renderStores();
+  document.getElementById('select-store-btn').disabled = false;
+}
+
+function goToMenu() {
+  if (!selectedStore) return;
+  document.getElementById('menu-store-name').textContent = selectedStore.name;
+  renderCategories();
+  renderMenuItems('all');
+  goScreen('screen-menu');
+}
+
+/* =====================================================
+   MENU
+   ===================================================== */
+function renderCategories() {
+  var cats = [];
+  MENU_ITEMS.forEach(function(m){ if (cats.indexOf(m.category)<0) cats.push(m.category); });
+  document.getElementById('category-tabs').innerHTML =
+    '<button class="cat-tab active" onclick="filterCat(\'all\',this)">'+t('cat_all')+'</button>' +
+    cats.map(function(c){return '<button class="cat-tab" onclick="filterCat(\''+c+'\',this)">'+c+'</button>';}).join('');
+}
+
+function filterCat(cat, btn) {
+  document.querySelectorAll('.cat-tab').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  renderMenuItems(cat);
+}
+
+function renderMenuItems(cat) {
+  var items = MENU_ITEMS.filter(function(m){ return cat==='all'||m.category===cat; });
+  document.getElementById('menu-list').innerHTML = items.map(function(m) {
+    var priceHtml = m.price === 0
+      ? t('opt_select_type')
+      : '¥'+m.price.toLocaleString()+' <span class="unit">'+t('opt_tax_incl').replace('%s', Math.floor(m.price*(1+m.tax/100)).toLocaleString())+'</span>';
+    return '<div class="menu-item'+(m.soldOut?' sold-out':'')+'" onclick="'+(m.soldOut?'':'openOption(\''+m.id+'\')')+'">'+
+      (m.soldOut?'<div class="sold-out-badge">'+t('opt_sold_out')+'</div>':'')+
+      '<div class="menu-item-img">'+m.emoji+'</div>'+
+      '<div class="menu-item-body">'+
+      '<div class="menu-item-name">'+m.name+'</div>'+
+      '<div class="menu-item-desc">'+m.desc+'</div>'+
+      '<div class="menu-item-footer">'+
+      '<div class="menu-item-price">'+priceHtml+'</div>'+
+      '<button class="add-btn">＋</button>'+
+      '</div></div></div>';
+  }).join('');
+}
+
+/* =====================================================
+   OPTION MODAL
+   ===================================================== */
+function openOption(id) {
+  currentItem = MENU_ITEMS.find(function(m){return m.id===id;});
+  if (!currentItem) return;
+  currentOptions = {}; currentQty = 1;
+  document.getElementById('opt-img').textContent = currentItem.emoji;
+  document.getElementById('opt-name').textContent = currentItem.name;
+  document.getElementById('opt-desc').textContent = currentItem.desc;
+  document.getElementById('opt-price').textContent = currentItem.price === 0
+    ? t('opt_select_type')
+    : '¥'+currentItem.price.toLocaleString()+' ('+t('opt_tax_incl').replace('%s', Math.floor(currentItem.price*(1+currentItem.tax/100)).toLocaleString())+')';
+  document.getElementById('opt-qty').textContent = 1;
+  renderOptionGroups();
+  updateAddBtnPrice();
+  document.getElementById('option-modal').classList.add('open');
+}
+
+function renderOptionGroups() {
+  var groups = currentItem.options;
+  if (!groups||!groups.length){document.getElementById('option-groups').innerHTML='';return;}
+  document.getElementById('option-groups').innerHTML = groups.map(function(g) {
+    var subText = g.type==='counter'
+      ? '<span class="req-badge">'+t('opt_required')+'</span>'+g.minTotal+'〜'+g.maxTotal
+      : g.required ? '<span class="req-badge">'+t('opt_required')+'</span>' : '<span class="opt-badge">'+t('opt_optional')+'</span>'+(g.max>1?'Max '+g.max:'');
+    var items = g.type==='counter'
+      ? g.items.map(function(item){
+          var val=(currentOptions[g.id]&&currentOptions[g.id][item.id])||0;
+          return '<div class="option-item" style="flex-direction:column;align-items:stretch">'+
+            '<div style="display:flex;align-items:center">'+
+            '<div style="flex:1;font-size:14px">'+item.name+'</div>'+
+            '<div style="font-size:13px;color:var(--brand);font-weight:600;margin-right:12px">'+(item.price>0?'¥'+item.price:t('opt_free'))+'</div>'+
+            '<div class="option-item-counter">'+
+            '<button class="counter-btn" onclick="changeCounter(\''+g.id+'\',\''+item.id+'\','+g.maxTotal+',-1)">－</button>'+
+            '<span class="counter-val" id="cnt-'+g.id+'-'+item.id+'">'+val+'</span>'+
+            '<button class="counter-btn active" onclick="changeCounter(\''+g.id+'\',\''+item.id+'\','+g.maxTotal+',1)">＋</button>'+
+            '</div></div></div>';
+        }).join('')+'<div class="counter-limit" id="cnt-total-'+g.id+'">0 / '+g.maxTotal+'</div>'
+      : g.items.map(function(item){
+          var isSel = g.type==='radio'?currentOptions[g.id]===item.id:(currentOptions[g.id]||[]).indexOf(item.id)>=0;
+          return '<div class="option-item '+(g.type)+' '+(isSel?'selected':'')+'" onclick="selectOption(\''+g.id+'\',\''+item.id+'\',\''+g.type+'\','+g.max+')" id="opt-item-'+g.id+'-'+item.id+'">'+
+            '<div class="option-item-control"></div>'+
+            '<div class="option-item-name">'+item.name+'</div>'+
+            '<div class="option-item-price '+(item.price===0?'free':'')+'">'+( item.price===0?t('opt_free'):'+¥'+item.price)+'</div>'+
+            '</div>';
+        }).join('');
+    return '<div class="option-group">'+
+      '<div class="option-group-header"><div class="option-group-title">'+g.title+'</div><div class="option-group-sub">'+subText+'</div></div>'+
+      items+'</div>';
+  }).join('');
+}
+
+function selectOption(groupId,itemId,type,max) {
+  if (type==='radio') { currentOptions[groupId]=itemId; }
+  else {
+    if (!currentOptions[groupId]) currentOptions[groupId]=[];
+    var arr=currentOptions[groupId], idx=arr.indexOf(itemId);
+    if (idx>=0) arr.splice(idx,1);
+    else if (arr.length<max) arr.push(itemId);
+    else { showToast(t('toast_max').replace('%d',max)); return; }
+  }
+  renderOptionGroups(); updateAddBtnPrice();
+}
+
+function changeCounter(groupId,itemId,maxTotal,delta) {
+  if (!currentOptions[groupId]) currentOptions[groupId]={};
+  var total=Object.values(currentOptions[groupId]).reduce(function(a,b){return a+b;},0);
+  var current=currentOptions[groupId][itemId]||0;
+  if (delta>0&&total>=maxTotal){showToast(t('toast_max').replace('%d',maxTotal));return;}
+  if (delta<0&&current<=0) return;
+  currentOptions[groupId][itemId]=current+delta;
+  var el=document.getElementById('cnt-'+groupId+'-'+itemId);
+  if(el)el.textContent=currentOptions[groupId][itemId];
+  var newTotal=Object.values(currentOptions[groupId]).reduce(function(a,b){return a+b;},0);
+  var totEl=document.getElementById('cnt-total-'+groupId);
+  if(totEl)totEl.textContent=newTotal+' / '+maxTotal;
+  updateAddBtnPrice();
+}
+
+function changeQty(delta) {
+  currentQty=Math.max(1,currentQty+delta);
+  document.getElementById('opt-qty').textContent=currentQty;
+  updateAddBtnPrice();
+}
+
+function calcOptionPrice() {
+  if (!currentItem) return 0;
+  var extra=0;
+  currentItem.options.forEach(function(g){
+    if (g.type==='radio'&&currentOptions[g.id]){
+      var item=g.items.find(function(i){return i.id===currentOptions[g.id];});
+      if(item)extra+=item.price;
+    } else if (g.type==='checkbox'&&currentOptions[g.id]){
+      currentOptions[g.id].forEach(function(iid){
+        var item=g.items.find(function(i){return i.id===iid;}); if(item)extra+=item.price;
+      });
+    } else if (g.type==='counter'&&currentOptions[g.id]){
+      g.items.forEach(function(item){extra+=(currentOptions[g.id][item.id]||0)*item.price;});
+    }
+  });
+  return (currentItem.price+extra)*currentQty;
+}
+
+function updateAddBtnPrice() {
+  document.getElementById('add-btn-price').textContent='¥'+calcOptionPrice().toLocaleString();
+  document.getElementById('add-to-cart-btn').disabled=false;
+}
+
+function addToCart() {
+  if (!currentItem) return;
+  var optionLabel=[];
+  currentItem.options.forEach(function(g){
+    if(g.type==='radio'&&currentOptions[g.id]){var item=g.items.find(function(i){return i.id===currentOptions[g.id];});if(item)optionLabel.push(item.name);}
+    else if(g.type==='checkbox'&&currentOptions[g.id]&&currentOptions[g.id].length>0){currentOptions[g.id].forEach(function(iid){var item=g.items.find(function(i){return i.id===iid;});if(item)optionLabel.push(item.name);});}
+    else if(g.type==='counter'&&currentOptions[g.id]){g.items.forEach(function(item){var cnt=currentOptions[g.id][item.id]||0;if(cnt>0)optionLabel.push(item.name+'×'+cnt);});}
+  });
+  cart.push({id:currentItem.id,name:currentItem.name,price:currentItem.price,tax:currentItem.tax,
+    optionPrice:calcOptionPrice()/currentQty-currentItem.price,optionLabel:optionLabel,
+    qty:currentQty,total:calcOptionPrice(),emoji:currentItem.emoji});
+  closeOptionModal(); updateCartUI(); showToast(t('toast_added'));
+}
+
+function closeOptionModal(){ document.getElementById('option-modal').classList.remove('open'); }
+
+function updateCartUI(){
+  var total=cart.reduce(function(s,i){return s+i.total;},0);
+  var count=cart.reduce(function(s,i){return s+i.qty;},0);
+  var badge=document.getElementById('cart-badge');
+  badge.textContent=count; badge.style.display=count>0?'flex':'none';
+  document.getElementById('cart-count-badge').textContent=count+'点 ¥'+total.toLocaleString();
+  document.getElementById('cart-btn').disabled=count===0;
+}
+
+/* =====================================================
+   RECOMMEND
+   ===================================================== */
+function goToRecommend(){
+  var popular=MENU_ITEMS.filter(function(m){return m.popular&&!m.soldOut&&!cart.find(function(c){return c.id===m.id;});}).slice(0,4);
+  document.getElementById('recommend-grid').innerHTML=popular.map(function(m){
+    return '<div class="recommend-card">'+
+      '<div class="recommend-card-img">'+m.emoji+'</div>'+
+      '<div class="recommend-card-body">'+
+      '<div class="recommend-card-name">'+m.name+'</div>'+
+      '<div class="recommend-card-price">¥'+m.price.toLocaleString()+'</div>'+
+      '<button class="recommend-add-btn" onclick="quickAdd(\''+m.id+'\',this)">'+t('btn_quick_add')+'</button>'+
+      '</div></div>';
+  }).join('');
+  if (!popular.length){goToCheckout();return;}
+  goScreen('screen-recommend');
+}
+
+function quickAdd(id,btn){
+  var item=MENU_ITEMS.find(function(m){return m.id===id;});
+  if(!item||item.options.length>0){openOption(id);goScreen('screen-menu');return;}
+  cart.push({id:item.id,name:item.name,price:item.price,tax:item.tax,optionPrice:0,optionLabel:[],qty:1,total:item.price,emoji:item.emoji});
+  updateCartUI(); showToast('✅ '+item.name);
+  if(btn)btn.textContent=t('btn_added');
+}
+
+/* =====================================================
+   CHECKOUT
+   ===================================================== */
+function goToCheckout(){
+  renderOrderDetail();
+  document.getElementById('co-takeout').classList.toggle('selected',orderType==='takeout');
+  document.getElementById('co-delivery').classList.toggle('selected',orderType==='delivery');
+  document.getElementById('delivery-section').style.display=orderType==='delivery'?'block':'none';
+  goScreen('screen-checkout');
+}
+
+function selectOrderType(type){
+  orderType=type;
+  document.getElementById('co-takeout').classList.toggle('selected',type==='takeout');
+  document.getElementById('co-delivery').classList.toggle('selected',type==='delivery');
+  document.getElementById('delivery-section').style.display=type==='delivery'?'block':'none';
+}
+
+function selectDeliveryType(type,btn){
+  document.querySelectorAll('#delivery-section .type-btn').forEach(function(b){b.classList.remove('selected');});
+  btn.classList.add('selected');
+  document.getElementById('scheduled-section').style.display=type==='scheduled'?'block':'none';
+}
+
+function renderPaymentOptions(){
+  document.getElementById('payment-options').innerHTML=PAYMENT_METHODS.map(function(p){
+    var name=p.nameKey?t(p.nameKey):p.name;
+    return '<div class="payment-option'+(p.id===selectedPayment?' selected':'\')+'" onclick="selectPayment(\''+p.id+'\')">'+
+      '<span class="payment-option-icon">'+p.icon+'</span>'+
+      '<span class="payment-option-name">'+name+'</span>'+
+      '</div>';
+  }).join('');
+}
+
+function selectPayment(id){selectedPayment=id;renderPaymentOptions();}
+
+function renderOrderDetail(){
+  document.getElementById('order-items-detail').innerHTML=cart.map(function(item){
+    var opts=item.optionLabel.length?'<div style="font-size:11px;color:var(--text2)">'+item.optionLabel.join('・')+'</div>':'';
+    return '<div class="order-item-row">'+
+      '<div class="order-item-name">'+item.name+opts+'</div>'+
+      '<div class="order-item-qty">×'+item.qty+'</div>'+
+      '<div class="order-item-subtotal">¥'+item.total.toLocaleString()+'</div>'+
+      '</div>';
+  }).join('');
+  updatePriceSummary();
+}
+
+function applyCoupon(){
+  var code=document.getElementById('coupon-input').value.trim().toUpperCase();
+  var coupons={
+    'WELCOME20':{label:'Welcome 20%OFF',type:'percent',value:20},
+    'SPRING10':{label:'Spring 10%OFF',type:'percent',value:10}
+  };
+  var coupon=coupons[code];
+  if(!coupon){document.getElementById('coupon-result').innerHTML='<span style="color:var(--brand)">'+t('coupon_ng')+'</span>';return;}
+  appliedCoupon=coupon;
+  var subtotal=cart.reduce(function(s,i){return s+i.total;},0);
+  discount=coupon.type==='percent'?Math.floor(subtotal*coupon.value/100):coupon.value;
+  document.getElementById('coupon-result').innerHTML='<span style="color:var(--green)">✅ '+coupon.label+' '+t('coupon_ok')+'（−¥'+discount.toLocaleString()+'）</span>';
+  updatePriceSummary();
+}
+
+function updatePriceSummary(){
+  var subtotal=cart.reduce(function(s,i){return s+i.total;},0);
+  var final=Math.max(0,subtotal-discount);
+  var dr=document.getElementById('discount-rows');
+  if(discount>0&&appliedCoupon){
+    dr.innerHTML='<div class="checkout-discount"><span>'+appliedCoupon.label+'</span><span>－¥'+discount.toLocaleString()+'</span></div>';
+  } else {dr.innerHTML='';}
+  document.getElementById('total-price').textContent='¥'+final.toLocaleString();
+  document.getElementById('submit-price').textContent='¥'+final.toLocaleString();
+}
+
+function submitOrder(){
+  var btn=document.querySelector('.checkout-submit-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span>'+t('processing')+'</span>';
+  setTimeout(function(){
+    var num=Math.floor(Math.random()*90)+10;
+    document.getElementById('order-number').textContent=num;
+    // 完了画面のサブテキスト（テイクアウト/デリバリーで切替）
+    document.getElementById('complete-sub-text').textContent=
+      orderType==='delivery'?t('complete_sub_delivery'):t('complete_sub_takeout');
+    cart=[]; updateCartUI(); goScreen('screen-complete');
+  },1500);
+}
+
+/* =====================================================
+   UTILS
+   ===================================================== */
+function goScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goHome(){
+  goScreen('screen-map'); cart=[]; updateCartUI();
+  selectedStore=null; renderStores();
+  document.getElementById('select-store-btn').disabled=true;
+  document.querySelector('.checkout-submit-btn').disabled=false;
+  document.querySelector('.checkout-submit-btn').innerHTML=
+    '<span data-i18n="btn_submit">'+t('btn_submit')+'</span><span id="submit-price">¥0</span>';
+  appliedCoupon=null; discount=0;
+}
+
+function showToast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},2000);
+}
+
+/* ===== INIT ===== */
+applyBrand();
+initFromUrl();
+renderPaymentOptions();
+</script>
+</body>
+</html>
