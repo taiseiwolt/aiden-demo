@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>モバイルオーダー | AIden</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text2: #666;
+  --text3: #999;
+  --accent: #c0392b;
+  --accent2: #e74c3c;
+  --accent-dim: rgba(192,57,43,0.08);
+  --border: #e8e8e8;
+  --green: #27ae60;
+  --orange: #e67e22;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; max-width: 480px; margin: 0 auto; position: relative; }
+
+/* ===== SCREENS ===== */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ===== HEADER ===== */
+.app-header { background: var(--accent); color: white; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.app-header-title { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
+.app-header-back { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 4px; line-height: 1; }
+.app-header-cart { position: relative; background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
+.cart-badge { position: absolute; top: -4px; right: -4px; background: #f39c12; color: white; font-size: 10px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+/* ===== MAP SCREEN ===== */
+.map-screen-body { flex: 1; display: flex; flex-direction: column; }
+.order-type-select { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border); }
+.order-type-btn { padding: 14px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 3px solid transparent; color: var(--text2); transition: all 0.2s; background: white; border-top: none; border-left: none; border-right: none; font-family: 'Noto Sans JP', sans-serif; }
+.order-type-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.map-placeholder { height: 240px; background: linear-gradient(135deg, #e8f4e8 0%, #d4e8d4 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; overflow: hidden; }
+.map-location-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); font-size: 32px; animation: pinBounce 1s ease-in-out infinite; }
+@keyframes pinBounce { 0%,100%{transform:translate(-50%,-100%)} 50%{transform:translate(-50%,-110%)} }
+.stores-list { flex: 1; overflow-y: auto; padding: 12px; }
+.stores-list-title { font-size: 12px; color: var(--text2); padding: 8px 4px; letter-spacing: 0.05em; font-weight: 500; }
+.store-card { background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); display: flex; gap: 14px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; }
+.store-card:active { transform: scale(0.98); }
+.store-card.selected { border-color: var(--accent); }
+.store-card-icon { width: 56px; height: 56px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.store-card-info { flex: 1; }
+.store-card-name { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+.store-card-address { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.store-card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+.store-card-distance { font-size: 12px; color: var(--accent); font-weight: 600; }
+.store-card-status { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+.store-card-status.open { background: rgba(39,174,96,0.1); color: var(--green); }
+.store-card-status.paused { background: rgba(231,76,60,0.1); color: var(--accent); }
+.store-card-status.closed { background: rgba(153,153,153,0.1); color: var(--text3); }
+.select-store-btn { width: calc(100% - 24px); margin: 0 12px 16px; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; letter-spacing: 0.05em; transition: background 0.2s; }
+.select-store-btn:disabled { background: var(--text3); }
+.select-store-btn:not(:disabled):active { background: var(--accent2); }
+
+/* ===== MENU SCREEN ===== */
+.menu-screen-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.category-tabs { display: flex; overflow-x: auto; padding: 0 12px; gap: 6px; background: white; border-bottom: 1px solid var(--border); -webkit-overflow-scrolling: touch; }
+.category-tabs::-webkit-scrollbar { display: none; }
+.cat-tab { padding: 12px 16px; white-space: nowrap; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Noto Sans JP', sans-serif; flex-shrink: 0; }
+.cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.menu-list { flex: 1; overflow-y: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
+.menu-item { background: white; border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; box-shadow: var(--shadow); display: flex; cursor: pointer; transition: all 0.15s; position: relative; }
+.menu-item:active { transform: scale(0.99); }
+.menu-item.sold-out { opacity: 0.5; pointer-events: none; }
+.menu-item-img { width: 100px; height: 100px; background: linear-gradient(135deg, #2d1f0a, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
+.menu-item-body { flex: 1; padding: 12px 12px 12px 14px; }
+.menu-item-name { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+.menu-item-desc { font-size: 11px; color: var(--text2); line-height: 1.5; margin-bottom: 8px; }
+.menu-item-footer { display: flex; align-items: center; justify-content: space-between; }
+.menu-item-price { font-weight: 700; font-size: 16px; color: var(--accent); }
+.menu-item-price span { font-size: 11px; font-weight: 400; color: var(--text3); }
+.add-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sold-out-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.cart-bottom { padding: 12px; background: white; border-top: 1px solid var(--border); position: sticky; bottom: 0; }
+.cart-bottom-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; display: flex; align-items: center; justify-content: space-between; }
+.cart-bottom-btn:disabled { background: var(--text3); }
+.cart-count-badge { background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 10px; font-size: 13px; }
+
+/* ===== OPTION MODAL ===== */
+.option-modal { position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column; }
+.option-modal.open { display: flex; }
+.option-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.option-sheet { position: relative; margin-top: auto; background: white; border-radius: 20px 20px 0 0; max-height: 85vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.option-sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto; }
+.option-sheet-img { height: 180px; background: linear-gradient(135deg, #2d1f0a, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 64px; }
+.option-sheet-body { padding: 20px; }
+.option-sheet-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.option-sheet-desc { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+.option-sheet-price { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+.option-group { margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.option-group-header { padding: 12px 16px; background: #f9f9f9; border-bottom: 1px solid var(--border); }
+.option-group-title { font-weight: 700; font-size: 14px; }
+.option-group-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.option-group-sub .req-badge { background: var(--accent); color: white; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-right: 4px; }
+.option-group-sub .opt-badge { background: var(--green); color: white; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-right: 4px; }
+.option-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.option-item:last-child { border-bottom: none; }
+.option-item:active { background: var(--bg); }
+.option-item-control { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); margin-right: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.option-item.radio .option-item-control { border-radius: 50%; }
+.option-item.checkbox .option-item-control { border-radius: 4px; }
+.option-item.selected .option-item-control { background: var(--accent); border-color: var(--accent); }
+.option-item.selected .option-item-control::after { content: '✓'; color: white; font-size: 12px; font-weight: 700; }
+.option-item-name { flex: 1; font-size: 14px; }
+.option-item-price { font-size: 13px; color: var(--accent); font-weight: 600; }
+.option-item-price.free { color: var(--text3); }
+/* 数量選択型オプション */
+.option-item-counter { display: flex; align-items: center; gap: 10px; }
+.counter-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); background: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.counter-btn.active { border-color: var(--accent); color: var(--accent); }
+.counter-val { font-size: 15px; font-weight: 700; min-width: 20px; text-align: center; }
+.counter-limit { font-size: 11px; color: var(--text3); text-align: center; margin-top: 4px; }
+.qty-selector { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+.qty-selector-label { font-size: 14px; font-weight: 600; }
+.qty-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.qty-btn.active { border-color: var(--accent); color: var(--accent); }
+.qty-val { font-size: 20px; font-weight: 700; min-width: 28px; text-align: center; }
+.add-to-cart-btn { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; }
+.add-to-cart-btn:disabled { background: var(--text3); }
+
+/* ===== RECOMMEND ===== */
+.recommend-screen-body { flex: 1; overflow-y: auto; padding: 16px; }
+.recommend-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+.recommend-sub { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 20px; }
+.recommend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.recommend-card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: all 0.15s; }
+.recommend-card:active { transform: scale(0.97); }
+.recommend-card-img { height: 100px; background: linear-gradient(135deg, #2d1f0a, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+.recommend-card-body { padding: 10px; }
+.recommend-card-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.recommend-card-price { font-size: 14px; font-weight: 700; color: var(--accent); }
+.recommend-add-btn { width: 100%; padding: 7px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 6px; }
+.skip-btn { width: 100%; padding: 13px; background: none; border: 2px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+
+/* ===== CHECKOUT ===== */
+.checkout-body { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 100px; }
+.checkout-section { background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.checkout-section-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+.checkout-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.checkout-row:last-child { border-bottom: none; }
+.checkout-row-label { color: var(--text2); }
+.checkout-total-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 2px solid var(--text); margin-top: 4px; }
+.checkout-total-label { font-size: 16px; font-weight: 700; }
+.checkout-total-price { font-size: 22px; font-weight: 700; color: var(--accent); }
+.checkout-discount { font-size: 13px; color: var(--green); display: flex; justify-content: space-between; padding: 6px 0; }
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.type-btn { padding: 10px; text-align: center; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; background: none; font-family: 'Noto Sans JP', sans-serif; color: var(--text2); }
+.type-btn.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+.field-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Noto Sans JP', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; background: var(--bg); }
+.field-input:focus { border-color: var(--accent); background: white; }
+.field-label { font-size: 12px; color: var(--text2); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.05em; display: flex; justify-content: space-between; }
+.payment-option { display: flex; align-items: center; padding: 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; margin-bottom: 8px; transition: all 0.15s; gap: 12px; }
+.payment-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.payment-option-icon { font-size: 24px; }
+.payment-option-name { font-size: 14px; font-weight: 600; }
+.coupon-row { display: flex; gap: 8px; }
+.coupon-input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Noto Sans JP', sans-serif; font-size: 14px; outline: none; }
+.coupon-btn { padding: 10px 16px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-family: 'Noto Sans JP', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.order-item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; gap: 8px; }
+.order-item-row:last-child { border-bottom: none; }
+.order-item-name { flex: 1; font-weight: 500; }
+.order-item-qty { color: var(--text2); white-space: nowrap; }
+.order-item-subtotal { font-weight: 600; white-space: nowrap; }
+.checkout-submit { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; padding: 12px; background: white; border-top: 1px solid var(--border); }
+.checkout-submit-btn { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.checkout-submit-btn:disabled { background: var(--text3); }
+
+/* ===== COMPLETE ===== */
+.complete-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; text-align: center; }
+.complete-icon { font-size: 72px; margin-bottom: 20px; animation: scaleIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275); }
+@keyframes scaleIn { 0%{transform:scale(0)} 100%{transform:scale(1)} }
+.complete-number { font-size: 72px; font-weight: 700; color: var(--accent); font-family: 'Cormorant Garamond', serif; line-height: 1; margin: 16px 0 8px; }
+.complete-number-label { font-size: 12px; color: var(--text2); letter-spacing: 0.15em; }
+.complete-title { font-size: 20px; font-weight: 700; margin: 20px 0 8px; }
+.complete-sub { font-size: 14px; color: var(--text2); line-height: 1.8; }
+.complete-wait { background: var(--accent-dim); border: 1px solid rgba(192,57,43,0.2); border-radius: var(--radius); padding: 16px; margin: 20px 0; width: 100%; }
+.complete-wait-time { font-size: 32px; font-weight: 700; color: var(--accent); font-family: 'Cormorant Garamond', serif; }
+.complete-wait-label { font-size: 12px; color: var(--text2); }
+.home-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 24px; }
+
+/* ===== TOAST ===== */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 500; transition: transform 0.3s; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ===== SCREEN 1: 店舗選択・注文タイプ ===== -->
+<div class="screen active" id="screen-map">
+  <div class="app-header">
+    <span style="width:40px"></span>
+    <span class="app-header-title">モバイルオーダー</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="map-screen-body">
+    <div class="order-type-select">
+      <button class="order-type-btn active" id="btn-takeout" onclick="setOrderType('takeout')">🥡 テイクアウト</button>
+      <button class="order-type-btn" id="btn-delivery" onclick="setOrderType('delivery')">🛵 デリバリー</button>
+    </div>
+    <div class="map-placeholder">
+      <div class="map-location-pin">📍</div>
+    </div>
+    <div class="stores-list">
+      <div class="stores-list-title">📍 近くの店舗</div>
+      <div id="stores-list"></div>
+    </div>
+    <button class="select-store-btn" id="select-store-btn" onclick="goToMenu()" disabled>この店舗で注文する →</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: メニュー選択 ===== -->
+<div class="screen" id="screen-menu">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-map')">←</button>
+    <span class="app-header-title" id="menu-store-name">店舗名</span>
+    <button class="app-header-cart" onclick="goToRecommend()">
+      🛒<span class="cart-badge" id="cart-badge" style="display:none">0</span>
+    </button>
+  </div>
+  <div class="menu-screen-body">
+    <div class="category-tabs" id="category-tabs"></div>
+    <div class="menu-list" id="menu-list"></div>
+    <div class="cart-bottom">
+      <button class="cart-bottom-btn" id="cart-btn" onclick="goToRecommend()" disabled>
+        <span>カートを見る</span>
+        <span class="cart-count-badge" id="cart-count-badge">0点 ¥0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== オプションモーダル ===== -->
+<div class="option-modal" id="option-modal">
+  <div class="option-overlay" onclick="closeOptionModal()"></div>
+  <div class="option-sheet">
+    <div class="option-sheet-handle"></div>
+    <div class="option-sheet-img" id="opt-img"></div>
+    <div class="option-sheet-body">
+      <div class="option-sheet-name" id="opt-name"></div>
+      <div class="option-sheet-desc" id="opt-desc"></div>
+      <div class="option-sheet-price" id="opt-price"></div>
+      <div id="option-groups"></div>
+      <div class="qty-selector">
+        <span class="qty-selector-label">数量</span>
+        <button class="qty-btn" onclick="changeQty(-1)">－</button>
+        <span class="qty-val" id="opt-qty">1</span>
+        <button class="qty-btn active" onclick="changeQty(1)">＋</button>
+      </div>
+      <button class="add-to-cart-btn" id="add-to-cart-btn" onclick="addToCart()">
+        <span>カートに追加</span>
+        <span id="add-btn-price">¥0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: レコメンド ===== -->
+<div class="screen" id="screen-recommend">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-menu')">←</button>
+    <span class="app-header-title">追加でいかがですか？</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="recommend-screen-body">
+    <div class="recommend-title">🎉 カートに追加しました！</div>
+    <div class="recommend-sub">一緒にいかがですか？</div>
+    <div class="recommend-grid" id="recommend-grid"></div>
+    <button class="skip-btn" onclick="goToCheckout()">このまま注文へ進む →</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: 決済 ===== -->
+<div class="screen" id="screen-checkout">
+  <div class="app-header">
+    <button class="app-header-back" onclick="goScreen('screen-recommend')">←</button>
+    <span class="app-header-title">ご注文内容の確認</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="checkout-body">
+
+    <!-- 注文区別 -->
+    <div class="checkout-section">
+      <div class="checkout-section-title">🥡 注文区別</div>
+      <div class="type-toggle">
+        <button class="type-btn selected" id="co-takeout" onclick="selectOrderType('takeout')">🥡 テイクアウト</button>
+        <button class="type-btn" id="co-delivery" onclick="selectOrderType('delivery')">🛵 デリバリー</button>
+      </div>
+    </div>
+
+    <!-- 受け取り時間 -->
+    <div class="checkout-section">
+      <div class="checkout-section-title">🕐 受け取り希望時間</div>
+      <div class="field-label">ご希望の受け取り時間</div>
+      <select class="field-input" id="pickup-time">
+        <option value="">できるだけ早く</option>
+        <option>15分後</option>
+        <option>30分後</option>
+        <option>45分後</option>
+        <option>1時間後</option>
+      </select>
+    </div>
+
+    <!-- デリバリーオプション（デリバリー選択時のみ表示） -->
+    <div class="checkout-section" id="delivery-section" style="display:none">
+      <div class="checkout-section-title">🛵 デリバリー設定</div>
+      <div class="field-label" style="margin-bottom:8px">配達タイプ</div>
+      <div class="type-toggle" style="margin-bottom:14px">
+        <button class="type-btn selected" onclick="selectDeliveryType('immediate',this)">⚡ 即時配達</button>
+        <button class="type-btn" onclick="selectDeliveryType('scheduled',this)">📅 予約注文</button>
+      </div>
+      <div id="scheduled-section" style="display:none">
+        <div class="field-label">配達希望日時</div>
+        <input type="datetime-local" class="field-input">
+      </div>
+      <div class="field-label" style="margin-top:12px">配達先住所</div>
+      <input type="text" class="field-input" placeholder="東京都渋谷区〇〇1-2-3">
+    </div>
+
+    <!-- お店へのリクエスト -->
+    <div class="checkout-section" id="request-section">
+      <div class="checkout-section-title">💬 お店へのリクエスト</div>
+      <textarea class="field-input" rows="3" placeholder="アレルギーや調理のご要望などご自由にお書きください。" style="resize:none"></textarea>
+    </div>
+
+    <!-- 決済方法 -->
+    <div class="checkout-section">
+      <div class="checkout-section-title">💳 お支払い方法</div>
+      <div id="payment-options"></div>
+    </div>
+
+    <!-- クーポン -->
+    <div class="checkout-section">
+      <div class="checkout-section-title">🎟️ クーポンコード</div>
+      <div class="coupon-row">
+        <input class="coupon-input" type="text" id="coupon-input" placeholder="クーポンコードを入力">
+        <button class="coupon-btn" onclick="applyCoupon()">適用</button>
+      </div>
+      <div id="coupon-result" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- 注文内容・金額 -->
+    <div class="checkout-section">
+      <div class="checkout-section-title">🧾 ご注文内容</div>
+      <div id="order-items-detail"></div>
+      <div style="margin-top:8px" id="discount-rows"></div>
+      <div class="checkout-total-row">
+        <span class="checkout-total-label">合計金額</span>
+        <span class="checkout-total-price" id="total-price">¥0</span>
+      </div>
+    </div>
+  </div>
+  <div class="checkout-submit">
+    <button class="checkout-submit-btn" onclick="submitOrder()">
+      <span>決済を確定する</span>
+      <span id="submit-price">¥0</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 5: 完了 ===== -->
+<div class="screen" id="screen-complete">
+  <div class="app-header">
+    <span style="width:40px"></span>
+    <span class="app-header-title">ご注文完了</span>
+    <span style="width:40px"></span>
+  </div>
+  <div class="complete-body">
+    <div class="complete-icon">🎉</div>
+    <div class="complete-number-label">受け取り番号</div>
+    <div class="complete-number" id="order-number">42</div>
+    <div class="complete-title">ご注文ありがとうございます！</div>
+    <div class="complete-sub">番号をお呼びしたらカウンターへお越しください。</div>
+    <div class="complete-wait">
+      <div class="complete-wait-label">お待ち時間の目安</div>
+      <div class="complete-wait-time">約15分</div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8">
+      ご注文内容はメールでもお送りします。<br>
+      ご不明な点はスタッフにお申し付けください。
+    </div>
+    <button class="home-btn" onclick="goHome()">トップに戻る</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+var STORES = [
+  { id: 's1', name: '焼肉 炭火亭 渋谷店', address: '東京都渋谷区恵比寿1-2-3', distance: 0.3, status: 'open', hasTakeout: true, hasDelivery: true, emoji: '🔥', paused: false },
+  { id: 's2', name: '焼肉 炭火亭 新宿店', address: '東京都新宿区新宿3-4-5', distance: 1.8, status: 'open', hasTakeout: true, hasDelivery: false, emoji: '🔥', paused: false },
+  { id: 's3', name: '焼肉 炭火亭 池袋店', address: '東京都豊島区池袋2-3-4', distance: 3.2, status: 'paused', hasTakeout: true, hasDelivery: false, emoji: '🔥', paused: true }
+];
+
+var MENU_ITEMS = [
+  { id: 'm1', name: '黒毛和牛 特上カルビ', desc: 'A5ランク黒毛和牛の霜降りカルビ。とろけるような脂と旨みが自慢の一品です。', price: 2800, tax: 10, category: '焼肉', emoji: '🥩', soldOut: false, popular: true,
+    options: [
+      { id: 'o1', title: '焼き加減', type: 'radio', required: true, min: 1, max: 1, items: [
+        { id: 'oi1', name: 'レア', price: 0 }, { id: 'oi2', name: 'ミディアムレア', price: 0 }, { id: 'oi3', name: 'ウェルダン', price: 0 }
+      ]},
+      { id: 'o2', title: 'トッピング', type: 'checkbox', required: false, min: 0, max: 3, items: [
+        { id: 'oi4', name: 'ガーリックバター', price: 200 }, { id: 'oi5', name: '卵黄', price: 100 }, { id: 'oi6', name: 'わさび', price: 0 }
+      ]}
+    ]
+  },
+  { id: 'm2', name: '石焼きビビンバ', desc: '熱々の石鍋でパリパリに仕上げたビビンバ。', price: 900, tax: 8, category: 'ご飯もの', emoji: '🍚', soldOut: false, popular: true,
+    options: [
+      { id: 'o3', title: '辛さ', type: 'radio', required: true, min: 1, max: 1, items: [
+        { id: 'oi7', name: '辛さなし', price: 0 }, { id: 'oi8', name: '普通', price: 0 }, { id: 'oi9', name: '辛め', price: 0 }
+      ]}
+    ]
+  },
+  { id: 'm3', name: 'おでん盛り合わせ', desc: '好きな具材を選んでオリジナル盛り合わせを。', price: 0, tax: 8, category: 'おでん', emoji: '🍢', soldOut: false, popular: false,
+    options: [
+      { id: 'o4', title: '具材を選んでください', type: 'counter', required: true, minTotal: 3, maxTotal: 10, items: [
+        { id: 'oi10', name: '大根', price: 180 }, { id: 'oi11', name: 'はんぺん', price: 150 }, { id: 'oi12', name: 'たまご', price: 120 }, { id: 'oi13', name: '白滝', price: 100 }, { id: 'oi14', name: '牛すじ', price: 250 }, { id: 'oi15', name: 'こんにゃく', price: 100 }
+      ]}
+    ]
+  },
+  { id: 'm4', name: 'ユッケジャンスープ', desc: '旨辛の本格スープ。体の芯から温まります。', price: 680, tax: 10, category: 'スープ', emoji: '🍲', soldOut: false, popular: true, options: [] },
+  { id: 'm5', name: '特上タン塩', desc: '厚切りで旨味濃厚な特上タン。', price: 1800, tax: 10, category: '焼肉', emoji: '🥩', soldOut: true, popular: false, options: [] },
+  { id: 'm6', name: 'カルビクッパ', desc: 'ほろほろのカルビが入った旨みたっぷりクッパ。', price: 780, tax: 8, category: 'ご飯もの', emoji: '🍜', soldOut: false, popular: true, options: [] }
+];
+
+var PAYMENT_METHODS = [
+  { id: 'card', name: 'クレジットカード', icon: '💳', provider: 'stripe' },
+  { id: 'apple_pay', name: 'Apple Pay', icon: '🍎', provider: 'stripe' },
+  { id: 'google_pay', name: 'Google Pay', icon: '🟢', provider: 'stripe' }
+];
+
+// ===== STATE =====
+var orderType = 'takeout';
+var selectedStore = null;
+var cart = [];
+var currentItem = null;
+var currentOptions = {};
+var currentQty = 1;
+var selectedPayment = 'card';
+var appliedCoupon = null;
+var discount = 0;
+
+// ===== INIT =====
+renderStores();
+renderPaymentOptions();
+
+// ===== STORE LIST =====
+function setOrderType(type) {
+  orderType = type;
+  document.getElementById('btn-takeout').classList.toggle('active', type === 'takeout');
+  document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
+  renderStores();
+}
+
+function renderStores() {
+  var list = STORES.filter(function(s) {
+    return orderType === 'takeout' ? s.hasTakeout : s.hasDelivery;
+  });
+  document.getElementById('stores-list').innerHTML = list.map(function(s) {
+    var statusMap = { open: ['open','受付中'], paused: ['paused','一時停止中'] };
+    var st = s.paused ? statusMap.paused : statusMap.open;
+    return '<div class="store-card'+(selectedStore&&selectedStore.id===s.id?' selected':'')+'" onclick="selectStore(\''+s.id+'\')">' +
+      '<div class="store-card-icon">'+s.emoji+'</div>' +
+      '<div class="store-card-info">' +
+      '<div class="store-card-name">'+s.name+'</div>' +
+      '<div class="store-card-address">'+s.address+'</div>' +
+      '<div class="store-card-meta">' +
+      '<span class="store-card-distance">📍 '+s.distance+'km</span>' +
+      '<span class="store-card-status '+st[0]+'">'+st[1]+'</span>' +
+      '</div></div></div>';
+  }).join('') || '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px">この注文タイプに対応した店舗がありません</div>';
+}
+
+function selectStore(id) {
+  var store = STORES.find(function(s){return s.id===id;});
+  if (store.paused) { showToast('⚠️ この店舗は現在受付を停止しています'); return; }
+  selectedStore = store;
+  renderStores();
+  document.getElementById('select-store-btn').disabled = false;
+}
+
+function goToMenu() {
+  if (!selectedStore) return;
+  document.getElementById('menu-store-name').textContent = selectedStore.name;
+  renderCategories();
+  renderMenuItems('all');
+  goScreen('screen-menu');
+}
+
+// ===== MENU =====
+function renderCategories() {
+  var cats = [...new Set(MENU_ITEMS.map(function(m){return m.category;}))];
+  document.getElementById('category-tabs').innerHTML =
+    '<button class="cat-tab active" onclick="filterCat(\'all\',this)">すべて</button>' +
+    cats.map(function(c){return '<button class="cat-tab" onclick="filterCat(\''+c+'\',this)">'+c+'</button>';}).join('');
+}
+
+function filterCat(cat, btn) {
+  document.querySelectorAll('.cat-tab').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  renderMenuItems(cat);
+}
+
+function renderMenuItems(cat) {
+  var items = MENU_ITEMS.filter(function(m){ return cat==='all'||m.category===cat; });
+  document.getElementById('menu-list').innerHTML = items.map(function(m) {
+    return '<div class="menu-item'+(m.soldOut?' sold-out':'')+'" onclick="'+(m.soldOut?'':'openOption(\''+m.id+'\')')+'">' +
+      (m.soldOut?'<div class="sold-out-badge">品切れ</div>':'') +
+      '<div class="menu-item-img">'+m.emoji+'</div>' +
+      '<div class="menu-item-body">' +
+      '<div class="menu-item-name">'+m.name+'</div>' +
+      '<div class="menu-item-desc">'+m.desc+'</div>' +
+      '<div class="menu-item-footer">' +
+      '<div class="menu-item-price">'+( m.price===0?'選択式':'¥'+m.price.toLocaleString())+'<span>'+(m.price>0?' (税込¥'+Math.floor(m.price*(1+m.tax/100)).toLocaleString()+')':'')+' </span></div>' +
+      '<button class="add-btn">＋</button>' +
+      '</div></div></div>';
+  }).join('');
+}
+
+// ===== OPTION MODAL =====
+function openOption(id) {
+  currentItem = MENU_ITEMS.find(function(m){return m.id===id;});
+  if (!currentItem) return;
+  currentOptions = {};
+  currentQty = 1;
+  document.getElementById('opt-img').textContent = currentItem.emoji;
+  document.getElementById('opt-name').textContent = currentItem.name;
+  document.getElementById('opt-desc').textContent = currentItem.desc;
+  document.getElementById('opt-price').textContent = currentItem.price === 0 ? '価格：選択式' : '¥' + currentItem.price.toLocaleString() + ' (税込¥' + Math.floor(currentItem.price*(1+currentItem.tax/100)).toLocaleString() + ')';
+  document.getElementById('opt-qty').textContent = 1;
+  renderOptionGroups();
+  updateAddBtnPrice();
+  document.getElementById('option-modal').classList.add('open');
+}
+
+function renderOptionGroups() {
+  var groups = currentItem.options;
+  if (!groups || !groups.length) { document.getElementById('option-groups').innerHTML = ''; return; }
+  document.getElementById('option-groups').innerHTML = groups.map(function(g) {
+    var subText = g.type === 'counter'
+      ? '<span class="req-badge">必須</span>' + g.minTotal + '個〜' + g.maxTotal + '個選択'
+      : g.required ? '<span class="req-badge">必須</span>いずれか1つ' : '<span class="opt-badge">任意</span>' + (g.max>1 ? '最大'+g.max+'つ' : '');
+    var items = g.type === 'counter'
+      ? g.items.map(function(item) {
+          var val = (currentOptions[g.id]&&currentOptions[g.id][item.id]) || 0;
+          var total = Object.values(currentOptions[g.id]||{}).reduce(function(a,b){return a+b;},0);
+          return '<div class="option-item" style="flex-direction:column;align-items:stretch;">' +
+            '<div style="display:flex;align-items:center;">' +
+            '<div style="flex:1;font-size:14px">'+item.name+'</div>' +
+            '<div style="font-size:13px;color:var(--accent);font-weight:600;margin-right:12px">'+(item.price>0?'¥'+item.price:'無料')+'</div>' +
+            '<div class="option-item-counter">' +
+            '<button class="counter-btn" onclick="changeCounter(\''+g.id+'\',\''+item.id+'\','+g.maxTotal+',-1)">－</button>' +
+            '<span class="counter-val" id="cnt-'+g.id+'-'+item.id+'">'+val+'</span>' +
+            '<button class="counter-btn active" onclick="changeCounter(\''+g.id+'\',\''+item.id+'\','+g.maxTotal+',1)">＋</button>' +
+            '</div></div>' +
+            '</div>';
+        }).join('') + '<div class="counter-limit" id="cnt-total-'+g.id+'">合計 0 / '+g.maxTotal+'個</div>'
+      : g.items.map(function(item) {
+          var isSelected = g.type === 'radio' ? currentOptions[g.id] === item.id : (currentOptions[g.id]||[]).includes(item.id);
+          return '<div class="option-item '+(g.type)+' '+(isSelected?'selected':'')+'" onclick="selectOption(\''+g.id+'\',\''+item.id+'\',\''+g.type+'\','+g.max+')" id="opt-item-'+g.id+'-'+item.id+'">' +
+            '<div class="option-item-control"></div>' +
+            '<div class="option-item-name">'+item.name+'</div>' +
+            '<div class="option-item-price '+(item.price===0?'free':'')+'">'+( item.price===0?'無料':'+¥'+item.price)+'</div>' +
+            '</div>';
+        }).join('');
+    return '<div class="option-group">' +
+      '<div class="option-group-header"><div class="option-group-title">'+g.title+'</div><div class="option-group-sub">'+subText+'</div></div>' +
+      items + '</div>';
+  }).join('');
+}
+
+function selectOption(groupId, itemId, type, max) {
+  if (type === 'radio') {
+    currentOptions[groupId] = itemId;
+  } else {
+    if (!currentOptions[groupId]) currentOptions[groupId] = [];
+    var arr = currentOptions[groupId];
+    var idx = arr.indexOf(itemId);
+    if (idx >= 0) arr.splice(idx, 1);
+    else if (arr.length < max) arr.push(itemId);
+    else { showToast('⚠️ 最大'+max+'つまで選択できます'); return; }
+  }
+  renderOptionGroups();
+  updateAddBtnPrice();
+}
+
+function changeCounter(groupId, itemId, maxTotal, delta) {
+  if (!currentOptions[groupId]) currentOptions[groupId] = {};
+  var total = Object.values(currentOptions[groupId]).reduce(function(a,b){return a+b;},0);
+  var current = currentOptions[groupId][itemId] || 0;
+  if (delta > 0 && total >= maxTotal) { showToast('⚠️ 最大'+maxTotal+'個まで選択できます'); return; }
+  if (delta < 0 && current <= 0) return;
+  currentOptions[groupId][itemId] = current + delta;
+  var el = document.getElementById('cnt-'+groupId+'-'+itemId);
+  if (el) el.textContent = currentOptions[groupId][itemId];
+  var newTotal = Object.values(currentOptions[groupId]).reduce(function(a,b){return a+b;},0);
+  var totEl = document.getElementById('cnt-total-'+groupId);
+  if (totEl) totEl.textContent = '合計 ' + newTotal + ' / ' + maxTotal + '個';
+  updateAddBtnPrice();
+}
+
+function changeQty(delta) {
+  currentQty = Math.max(1, currentQty + delta);
+  document.getElementById('opt-qty').textContent = currentQty;
+  updateAddBtnPrice();
+}
+
+function calcOptionPrice() {
+  if (!currentItem) return 0;
+  var extra = 0;
+  currentItem.options.forEach(function(g) {
+    if (g.type === 'radio' && currentOptions[g.id]) {
+      var item = g.items.find(function(i){return i.id===currentOptions[g.id];});
+      if (item) extra += item.price;
+    } else if (g.type === 'checkbox' && currentOptions[g.id]) {
+      currentOptions[g.id].forEach(function(itemId) {
+        var item = g.items.find(function(i){return i.id===itemId;});
+        if (item) extra += item.price;
+      });
+    } else if (g.type === 'counter' && currentOptions[g.id]) {
+      g.items.forEach(function(item) {
+        extra += (currentOptions[g.id][item.id]||0) * item.price;
+      });
+    }
+  });
+  return (currentItem.price + extra) * currentQty;
+}
+
+function updateAddBtnPrice() {
+  var price = calcOptionPrice();
+  document.getElementById('add-btn-price').textContent = '¥' + price.toLocaleString();
+  document.getElementById('add-to-cart-btn').disabled = false;
+}
+
+function addToCart() {
+  if (!currentItem) return;
+  var optionLabel = [];
+  currentItem.options.forEach(function(g) {
+    if (g.type === 'radio' && currentOptions[g.id]) {
+      var item = g.items.find(function(i){return i.id===currentOptions[g.id];});
+      if (item) optionLabel.push(item.name);
+    } else if (g.type === 'checkbox' && currentOptions[g.id] && currentOptions[g.id].length > 0) {
+      currentOptions[g.id].forEach(function(iid) {
+        var item = g.items.find(function(i){return i.id===iid;});
+        if (item) optionLabel.push(item.name);
+      });
+    } else if (g.type === 'counter' && currentOptions[g.id]) {
+      g.items.forEach(function(item) {
+        var cnt = currentOptions[g.id][item.id]||0;
+        if (cnt > 0) optionLabel.push(item.name+'×'+cnt);
+      });
+    }
+  });
+  cart.push({
+    id: currentItem.id,
+    name: currentItem.name,
+    price: currentItem.price,
+    tax: currentItem.tax,
+    optionPrice: calcOptionPrice()/currentQty - currentItem.price,
+    optionLabel: optionLabel,
+    qty: currentQty,
+    total: calcOptionPrice(),
+    emoji: currentItem.emoji
+  });
+  closeOptionModal();
+  updateCartUI();
+  showToast('✅ カートに追加しました');
+}
+
+function closeOptionModal() {
+  document.getElementById('option-modal').classList.remove('open');
+}
+
+function updateCartUI() {
+  var total = cart.reduce(function(s,i){return s+i.total;},0);
+  var count = cart.reduce(function(s,i){return s+i.qty;},0);
+  var badge = document.getElementById('cart-badge');
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+  document.getElementById('cart-count-badge').textContent = count + '点 ¥' + total.toLocaleString();
+  document.getElementById('cart-btn').disabled = count === 0;
+}
+
+// ===== RECOMMEND =====
+function goToRecommend() {
+  var popular = MENU_ITEMS.filter(function(m){return m.popular && !m.soldOut && !cart.find(function(c){return c.id===m.id;});}).slice(0,4);
+  document.getElementById('recommend-grid').innerHTML = popular.map(function(m) {
+    return '<div class="recommend-card">' +
+      '<div class="recommend-card-img">'+m.emoji+'</div>' +
+      '<div class="recommend-card-body">' +
+      '<div class="recommend-card-name">'+m.name+'</div>' +
+      '<div class="recommend-card-price">¥'+m.price.toLocaleString()+'</div>' +
+      '<button class="recommend-add-btn" onclick="quickAdd(\''+m.id+'\')">＋ 追加する</button>' +
+      '</div></div>';
+  }).join('');
+  if (!popular.length) { goToCheckout(); return; }
+  goScreen('screen-recommend');
+}
+
+function quickAdd(id) {
+  var item = MENU_ITEMS.find(function(m){return m.id===id;});
+  if (!item || item.options.length > 0) { openOption(id); goScreen('screen-menu'); return; }
+  cart.push({ id:item.id, name:item.name, price:item.price, tax:item.tax, optionPrice:0, optionLabel:[], qty:1, total:item.price, emoji:item.emoji });
+  updateCartUI();
+  showToast('✅ '+item.name+'を追加しました');
+  var el = document.querySelector('.recommend-card [onclick="quickAdd(\''+id+'\')"]');
+  if (el) el.textContent = '✓ 追加済み';
+}
+
+// ===== CHECKOUT =====
+function goToCheckout() {
+  renderOrderDetail();
+  document.getElementById('co-takeout').classList.toggle('selected', orderType==='takeout');
+  document.getElementById('co-delivery').classList.toggle('selected', orderType==='delivery');
+  document.getElementById('delivery-section').style.display = orderType==='delivery'?'block':'none';
+  goScreen('screen-checkout');
+}
+
+function selectOrderType(type) {
+  orderType = type;
+  document.getElementById('co-takeout').classList.toggle('selected',type==='takeout');
+  document.getElementById('co-delivery').classList.toggle('selected',type==='delivery');
+  document.getElementById('delivery-section').style.display = type==='delivery'?'block':'none';
+}
+
+function selectDeliveryType(type, btn) {
+  document.querySelectorAll('#delivery-section .type-btn').forEach(function(b){b.classList.remove('selected');});
+  btn.classList.add('selected');
+  document.getElementById('scheduled-section').style.display = type==='scheduled'?'block':'none';
+}
+
+function renderPaymentOptions() {
+  document.getElementById('payment-options').innerHTML = PAYMENT_METHODS.map(function(p) {
+    return '<div class="payment-option'+(p.id===selectedPayment?' selected':'')+'" onclick="selectPayment(\''+p.id+'\')">'+
+      '<span class="payment-option-icon">'+p.icon+'</span>'+
+      '<span class="payment-option-name">'+p.name+'</span>'+
+      '</div>';
+  }).join('');
+}
+
+function selectPayment(id) {
+  selectedPayment = id;
+  renderPaymentOptions();
+}
+
+function renderOrderDetail() {
+  document.getElementById('order-items-detail').innerHTML = cart.map(function(item) {
+    var opts = item.optionLabel.length ? '<div style="font-size:11px;color:var(--text2)">'+item.optionLabel.join('・')+'</div>' : '';
+    return '<div class="order-item-row">' +
+      '<div class="order-item-name">'+item.name+opts+'</div>' +
+      '<div class="order-item-qty">×'+item.qty+'</div>' +
+      '<div class="order-item-subtotal">¥'+item.total.toLocaleString()+'</div>' +
+      '</div>';
+  }).join('');
+  updatePriceSummary();
+}
+
+function applyCoupon() {
+  var code = document.getElementById('coupon-input').value.trim().toUpperCase();
+  var coupons = { 'WELCOME20': { label: 'ウェルカムクーポン20%OFF', type: 'percent', value: 20 }, 'SPRING10': { label: '春のキャンペーン10%OFF', type: 'percent', value: 10 } };
+  var coupon = coupons[code];
+  if (!coupon) { document.getElementById('coupon-result').innerHTML = '<span style="color:var(--accent)">❌ クーポンが見つかりません</span>'; return; }
+  appliedCoupon = coupon;
+  var subtotal = cart.reduce(function(s,i){return s+i.total;},0);
+  discount = coupon.type === 'percent' ? Math.floor(subtotal * coupon.value / 100) : coupon.value;
+  document.getElementById('coupon-result').innerHTML = '<span style="color:var(--green)">✅ '+coupon.label+'が適用されました（−¥'+discount.toLocaleString()+'）</span>';
+  updatePriceSummary();
+}
+
+function updatePriceSummary() {
+  var subtotal = cart.reduce(function(s,i){return s+i.total;},0);
+  var final = Math.max(0, subtotal - discount);
+  var discountRows = document.getElementById('discount-rows');
+  if (discount > 0 && appliedCoupon) {
+    discountRows.innerHTML = '<div class="checkout-discount"><span>'+appliedCoupon.label+'</span><span>－¥'+discount.toLocaleString()+'</span></div>';
+  } else { discountRows.innerHTML = ''; }
+  document.getElementById('total-price').textContent = '¥' + final.toLocaleString();
+  document.getElementById('submit-price').textContent = '¥' + final.toLocaleString();
+}
+
+function submitOrder() {
+  var btn = document.querySelector('.checkout-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>処理中...</span>';
+  setTimeout(function() {
+    var orderNum = Math.floor(Math.random() * 90) + 10;
+    document.getElementById('order-number').textContent = orderNum;
+    cart = [];
+    updateCartUI();
+    goScreen('screen-complete');
+  }, 1500);
+}
+
+// ===== UTILS =====
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goHome() { goScreen('screen-map'); cart = []; updateCartUI(); selectedStore = null; renderStores(); document.getElementById('select-store-btn').disabled = true; }
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');}, 2000);
+}
+</script>
+</body>
+</html>
