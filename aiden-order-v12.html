@@ -665,7 +665,7 @@ input,select,textarea{font-family:var(--font)}
         <div class="addr-sub" id="s2-sub">番地・号まで正確に入力してください</div>
         <input class="addr-f street" id="addr-street" type="text" placeholder="東京都渋谷区恵比寿1丁目2-3">
         <input class="addr-f" id="addr-building" type="text" placeholder="マンション名・部屋番号（任意）">
-        <button class="addr-continue" id="btn-continue" onclick="geocodeAndNext()">続ける</button>
+        <button class="addr-continue" id="btn-continue" onclick="goAddrStep(3)">続ける</button>
       </div>
     </div>
     <!-- Step 3: Confirm -->
@@ -1318,7 +1318,9 @@ var ZIP_MAP = {
 
 function openAddrModal(){
   document.getElementById('addr-overlay').classList.add('open');
-  document.getElementById('addr-zip').value = '';
+  document.getElementById('addr-zip').value      = '';
+  document.getElementById('addr-street').value   = '';
+  document.getElementById('addr-building').value = '';
   goAddrStep(1);
   setTimeout(function(){ document.getElementById('addr-zip').focus(); }, 150);
 }
@@ -1328,42 +1330,6 @@ function closeAddrModal(){
 function overlayClick(e){
   if(e.target === document.getElementById('addr-overlay')) closeAddrModal();
 }
-function geocodeAndNext(){
-  var street   = (document.getElementById('addr-street').value   || '').trim();
-  var building = (document.getElementById('addr-building').value || '').trim();
-  var query    = street + (building ? ' ' + building : '');
-  if(!query){ goAddrStep(3); return; }
-
-  /* ローディング表示 */
-  var btn = document.getElementById('btn-continue');
-  var origText = btn.textContent;
-  btn.textContent = '🔍 検索中...';
-  btn.disabled = true;
-
-  /* Nominatim API でジオコーディング */
-  var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q='
-            + encodeURIComponent(query);
-  fetch(url, {headers:{'Accept-Language':'ja'}})
-    .then(function(res){ return res.json(); })
-    .then(function(data){
-      if(data && data.length > 0){
-        pendingLat = parseFloat(data[0].lat);
-        pendingLng = parseFloat(data[0].lon);
-        console.log('[GEOCODE] 住所→座標:', query, pendingLat, pendingLng);
-      } else {
-        console.warn('[GEOCODE] 結果なし、ZIP座標を使用');
-      }
-    })
-    .catch(function(err){
-      console.warn('[GEOCODE] エラー、ZIP座標を使用:', err);
-    })
-    .finally(function(){
-      btn.textContent = origText;
-      btn.disabled = false;
-      goAddrStep(3);
-    });
-}
-
 function goAddrStep(n){
   document.querySelectorAll('.addr-step').forEach(function(s){ s.classList.remove('active'); });
   document.getElementById('addr-step-' + n).classList.add('active');
