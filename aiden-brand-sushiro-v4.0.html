@@ -74,8 +74,6 @@ img{max-width:100%}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 60%,rgba(0,0,0,0) 100%);display:flex;align-items:center}
 .hero-content{padding:40px 8%}
 .hero-catch{font-size:clamp(24px,4vw,44px);font-weight:700;color:white;line-height:1.4;margin-bottom:20px;font-family:'Noto Serif JP',serif;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.hero-cta-btn{display:inline-flex;align-items:center;gap:8px;background:white;color:var(--brand-primary);padding:12px 24px;border-radius:3px;font-size:14px;font-weight:700;transition:all .2s;box-shadow:var(--shadow)}
-.hero-cta-btn:hover{background:var(--brand-primary-light)}
 .hero-play-pause{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);color:white;border:none;border-radius:50%;width:32px;height:32px;font-size:12px;display:flex;align-items:center;justify-content:center}
 
 /* ===== CAMPAIGN ===== */
@@ -281,7 +279,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
       <a href="./aiden-brand-menu-v1.5.html" class="header-nav-link" data-i18n="nav_menu">メニュー</a>
       <a href="./aiden-brand-stores-v1.2.html" class="header-nav-link" data-i18n="nav_stores">お店を探す</a>
       <a href="javascript:void(0)" class="header-nav-link cta" data-i18n="nav_reserve" onclick="openResModal()">📅 来店予約</a>
-      <a href="./aiden-order-v2.html" class="header-nav-link cta" data-i18n="nav_order">🥡 お持ち帰り・デリバリー</a>
+      <a href="./aiden-order-v10.html" class="header-nav-link cta" data-i18n="nav_order">🥡 お持ち帰り・デリバリー</a>
     </nav>
     <!-- 言語切替プルダウン -->
     <div class="lang-select-wrap">
@@ -305,8 +303,8 @@ footer{background:#222;color:rgba(255,255,255,.7)}
 <div class="mobile-nav" id="mobile-nav">
   <div class="mobile-nav-cta">
     <a href="javascript:void(0)" data-i18n="nav_reserve" onclick="openResModal()">📅 来店予約</a>
-    <a href="./aiden-order-v2.html" data-i18n="nav_order_short">🥡 お持ち帰り</a>
-    <a href="./aiden-order-v2.html">🛵 デリバリー</a>
+    <a href="./aiden-order-v10.html" data-i18n="nav_order_short">🥡 お持ち帰り</a>
+    <a href="./aiden-order-v10.html">🛵 デリバリー</a>
   </div>
   <a href="./aiden-brand-menu-v1.5.html" data-i18n="nav_menu">📖 メニュー</a>
   <a href="./aiden-brand-stores-v1.2.html" data-i18n="nav_stores">📍 お店を探す</a>
@@ -320,7 +318,6 @@ footer{background:#222;color:rgba(255,255,255,.7)}
     <div class="hero-overlay">
       <div class="hero-content">
         <div class="hero-catch" data-i18n="hero_catch">うまい肉を、炭火で。<br>うまい肉で、心も一杯。</div>
-        <a href="#" class="hero-cta-btn" data-i18n="hero_btn">🔥 炭火亭のこだわり</a>
       </div>
     </div>
     <button class="hero-play-pause" id="hero-pp" onclick="toggleVideo()">⏸</button>
@@ -353,11 +350,11 @@ footer{background:#222;color:rgba(255,255,255,.7)}
         <div class="main-cta-card-img">📅</div>
         <div><div class="main-cta-card-title" data-i18n="cta_reserve">来店予約</div><div class="main-cta-card-sub" data-i18n="cta_reserve_sub">空席確認・来店予約</div></div>
       </a>
-      <a href="./aiden-order-v2.html?mode=takeout" class="main-cta-card">
+      <a href="./aiden-order-v10.html?mode=takeout" class="main-cta-card">
         <div class="main-cta-card-img">🥡</div>
         <div><div class="main-cta-card-title" data-i18n="cta_takeout">お持ち帰り</div><div class="main-cta-card-sub" data-i18n="cta_takeout_sub">テイクアウト注文</div></div>
       </a>
-      <a href="./aiden-order-v2.html?mode=delivery" class="main-cta-card">
+      <a href="./aiden-order-v10.html?mode=delivery" class="main-cta-card">
         <div class="main-cta-card-img">🛵</div>
         <div><div class="main-cta-card-title" data-i18n="cta_delivery">デリバリー</div><div class="main-cta-card-sub" data-i18n="cta_delivery_sub">自宅に届けます</div></div>
       </a>
@@ -433,7 +430,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
     <!-- メニュー -->
     <div><div class="footer-nav-title" data-i18n="footer_menu">メニュー</div><div class="footer-nav-list"><a href="./aiden-brand-menu-v1.5.html" data-i18n="f_grand_menu">グランドメニュー</a><a href="./aiden-brand-menu-v1.5.html" data-i18n="f_yakiniku">焼肉・特選肉</a><a href="./aiden-brand-menu-v1.5.html" data-i18n="f_rice">ご飯・麺</a><a href="./aiden-brand-menu-v1.5.html" data-i18n="f_drink">ドリンク</a><a href="./aiden-brand-menu-v1.5.html" data-i18n="f_course">コース・プラン</a></div></div>
     <!-- サービス -->
-    <div><div class="footer-nav-title" data-i18n="footer_service">サービス</div><div class="footer-nav-list"><a href="javascript:void(0)" data-i18n="cta_reserve" onclick="openResModal()">来店予約</a><a href="./aiden-order-v2.html?mode=takeout" data-i18n="cta_takeout">お持ち帰り</a><a href="./aiden-order-v2.html?mode=delivery" data-i18n="cta_delivery">デリバリー</a></div></div>
+    <div><div class="footer-nav-title" data-i18n="footer_service">サービス</div><div class="footer-nav-list"><a href="javascript:void(0)" data-i18n="cta_reserve" onclick="openResModal()">来店予約</a><a href="./aiden-order-v10.html?mode=takeout" data-i18n="cta_takeout">お持ち帰り</a><a href="./aiden-order-v10.html?mode=delivery" data-i18n="cta_delivery">デリバリー</a></div></div>
     <!-- 会社情報・採用情報 -->
     <div>
       <div class="footer-nav-title" data-i18n="footer_company">会社情報</div>
@@ -448,7 +445,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
 </footer>
 
 <div class="float-order">
-  <a href="./aiden-order-v2.html" class="float-order-btn"><span>🥡</span><span data-i18n="nav_order">お持ち帰り・デリバリー</span></a>
+  <a href="./aiden-order-v10.html" class="float-order-btn"><span>🥡</span><span data-i18n="nav_order">お持ち帰り・デリバリー</span></a>
   <div class="float-order-pulse"></div>
 </div>
 
