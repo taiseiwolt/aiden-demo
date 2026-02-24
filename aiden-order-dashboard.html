@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>AIden 受注ダッシュボード - プロトタイプ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans JP', sans-serif; overflow: hidden; height: 100vh; background: #F0F0F0; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #DDD; border-radius: 3px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes popIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+
+  .app { display:flex; height:100vh; width:100vw; overflow:hidden; }
+
+  /* Sidebar */
+  .sidebar { width:72px; background:#1A1A1A; display:flex; flex-direction:column; align-items:center; padding-top:12px; flex-shrink:0; }
+  .sidebar-logo { width:44px; height:44px; border-radius:12px; background:#D32F2F; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:24px; }
+  .nav-item { width:56px; padding:10px 0; border-radius:12px; text-align:center; cursor:pointer; position:relative; margin-bottom:4px; transition:background 0.15s; }
+  .nav-item:hover { background:rgba(255,255,255,0.08); }
+  .nav-item.active { background:rgba(255,255,255,0.12); }
+  .nav-item .icon { font-size:22px; }
+  .nav-item .label { font-size:9px; color:#888; margin-top:2px; }
+  .nav-item.active .label { color:#fff; font-weight:700; }
+  .nav-badge { position:absolute; top:4px; right:6px; min-width:18px; height:18px; border-radius:9px; background:#D32F2F; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+  .test-btn { width:48px; height:48px; border-radius:12px; background:#333; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; color:#aaa; text-align:center; line-height:1.2; margin-top:auto; margin-bottom:16px; transition:background 0.15s; }
+  .test-btn:hover { background:#444; }
+
+  /* Main */
+  .main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* Header */
+  .header { height:56px; background:#fff; display:flex; align-items:center; padding:0 20px; border-bottom:1px solid #E0E0E0; flex-shrink:0; transition:background 0.3s; }
+  .header.paused { background:#B71C1C; border-bottom:none; }
+  .header .store-name { font-weight:800; font-size:17px; color:#1A1A1A; letter-spacing:-0.5px; }
+  .header.paused .store-name { color:#fff; }
+  .header .pause-label { margin-left:12px; font-size:13px; color:rgba(255,255,255,0.85); font-weight:600; display:none; }
+  .header.paused .pause-label { display:block; }
+  .header-spacer { flex:1; }
+  .header-btn { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; cursor:pointer; background:#F5F5F5; margin-right:8px; font-size:12px; color:#666; font-weight:500; transition:background 0.15s; }
+  .header-btn:hover { background:#EAEAEA; }
+  .header.paused .header-btn { background:rgba(255,255,255,0.15); color:#fff; }
+  .printer-dot { width:8px; height:8px; border-radius:4px; }
+  .printer-dot.ok { background:#4CAF50; }
+  .printer-dot.err { background:#F44336; }
+  .notif-badge { position:absolute; top:2px; right:4px; min-width:16px; height:16px; border-radius:8px; background:#D32F2F; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .pause-toggle { padding:6px 16px; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px; transition:all 0.2s; background:#D32F2F; color:#fff; }
+  .pause-toggle:hover { opacity:0.9; }
+  .header.paused .pause-toggle { background:#fff; color:#D32F2F; }
+  .pause-menu { position:absolute; top:44px; right:0; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); padding:8px; z-index:100; width:200px; }
+  .pause-menu-title { font-size:12px; font-weight:700; color:#666; padding:8px 12px; }
+  .pause-menu-item { padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; color:#333; transition:background 0.15s; }
+  .pause-menu-item:hover { background:#F5F5F5; }
+
+  /* Filters */
+  .filters { display:flex; align-items:center; gap:6px; padding:12px 20px; flex-shrink:0; }
+  .filter-tab { padding:8px 16px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; transition:all 0.15s; background:#fff; color:#555; border:1px solid #DDD; }
+  .filter-tab:hover { background:#F5F5F5; }
+  .filter-tab.active { background:#1A1A1A; color:#fff; border-color:transparent; }
+  .filter-count { margin-left:6px; font-size:11px; opacity:0.75; }
+  .pulse-dot { margin-left:6px; width:8px; height:8px; border-radius:4px; background:#D32F2F; display:inline-block; animation:pulse 1.5s infinite; vertical-align:middle; }
+
+  /* Cards grid */
+  .cards-area { flex:1; overflow:auto; padding:0 20px 20px; }
+  .cards-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
+  .order-card { background:#fff; border-radius:14px; padding:16px; cursor:pointer; transition:all 0.15s; position:relative; overflow:hidden; border:2px solid transparent; }
+  .order-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); transform:translateY(-1px); }
+  .order-card.status-new { border-color:#D32F2F; box-shadow:0 0 0 3px #FFEBEE; }
+  .card-strip { position:absolute; top:0; left:0; right:0; height:3px; }
+  .card-header { display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:10px; }
+  .status-tag { font-size:12px; font-weight:800; padding:3px 8px; border-radius:6px; }
+  .order-num { font-size:18px; font-weight:800; color:#1A1A1A; letter-spacing:-1px; }
+  .card-type { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+  .card-type .emoji { font-size:18px; }
+  .card-type .type-name { font-size:13px; font-weight:700; color:#333; }
+  .card-type .channel { font-size:11px; color:#999; font-weight:500; }
+  .card-time { display:flex; align-items:center; gap:4px; margin-bottom:8px; }
+  .card-time .time-label { font-size:11px; color:#999; }
+  .card-time .time-val { font-size:15px; font-weight:800; color:#1A1A1A; }
+  .card-items { font-size:12px; color:#666; margin-bottom:10px; line-height:1.6; }
+  .card-items div { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-items .more { color:#bbb; }
+  .card-total { font-size:18px; font-weight:800; color:#1A1A1A; letter-spacing:-0.5px; }
+  .card-note { margin-top:8px; font-size:11px; color:#D32F2F; font-weight:600; }
+  .card-action { margin-top:12px; padding:8px 0; border-radius:8px; text-align:center; font-weight:700; font-size:13px; cursor:pointer; color:#fff; transition:opacity 0.15s; }
+  .card-action:hover { opacity:0.85; }
+  .card-action.primary { background:#D32F2F; }
+  .card-action.dark { background:#1A1A1A; }
+
+  /* Overlay */
+  .overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:1000; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); animation:fadeIn 0.2s; }
+
+  /* New order popup */
+  .popup { background:#fff; border-radius:20px; width:480px; max-height:85vh; overflow:auto; box-shadow:0 24px 64px rgba(0,0,0,0.3); animation:popIn 0.25s; }
+  .popup-header { background:#D32F2F; padding:20px 24px; border-radius:20px 20px 0 0; text-align:center; }
+  .popup-header .bell { font-size:28px; margin-bottom:4px; }
+  .popup-header .title { font-size:18px; font-weight:800; color:#fff; }
+  .popup-body { padding:20px 24px; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .info-grid-3 { display:flex; gap:12px; margin-bottom:16px; }
+  .info-grid-3 > div { flex:1; }
+  .info-box { background:#F8F8F8; border-radius:10px; padding:12px; }
+  .info-box .info-label { font-size:11px; color:#999; margin-bottom:2px; }
+  .info-box .info-value { font-size:14px; font-weight:700; }
+  .info-box .info-value.lg { font-size:20px; font-weight:800; }
+  .section-title { font-size:12px; font-weight:700; color:#999; margin-bottom:8px; }
+  .item-row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
+  .item-row .name { font-weight:600; }
+  .item-row .name .qty { color:#999; }
+  .item-row .price { font-weight:700; }
+  .item-option { font-size:12px; color:#888; padding-left:12px; margin-top:2px; }
+  .note-box { border-radius:10px; padding:12px; margin-bottom:16px; font-size:13px; }
+  .note-box.yellow { background:#FFF8E1; }
+  .note-box.blue { background:#F3F8FF; }
+  .note-box .note-label { font-weight:700; }
+  .popup-actions { display:flex; gap:12px; margin-top:8px; }
+  .popup-actions .btn { flex:1; padding:14px 0; border-radius:12px; text-align:center; font-weight:800; font-size:16px; cursor:pointer; transition:all 0.15s; }
+  .popup-actions .btn:hover { opacity:0.85; }
+  .popup-actions .btn.secondary { background:#F5F5F5; color:#666; flex:1; }
+  .popup-actions .btn.primary { background:#D32F2F; color:#fff; flex:2; }
+
+  /* Cancel dialog */
+  .cancel-dialog { background:#fff; border-radius:16px; width:380px; padding:24px; box-shadow:0 16px 48px rgba(0,0,0,0.25); animation:popIn 0.2s; }
+  .cancel-dialog .dialog-title { font-size:17px; font-weight:800; margin-bottom:4px; }
+  .cancel-dialog .dialog-sub { font-size:13px; color:#999; margin-bottom:16px; }
+  .cancel-reason { padding:12px 16px; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; margin-bottom:6px; border:1px solid #EEE; transition:background 0.15s; }
+  .cancel-reason:hover { background:#F5F5F5; }
+  .cancel-back { margin-top:8px; padding:10px 0; text-align:center; font-size:13px; color:#999; cursor:pointer; }
+
+  /* Detail panel */
+  .detail-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:flex-end; z-index:900; animation:fadeIn 0.15s; }
+  .detail-panel { width:420px; height:100%; background:#fff; box-shadow:-8px 0 32px rgba(0,0,0,0.15); overflow:auto; animation:slideIn 0.25s; }
+  .detail-header { padding:20px 24px; border-bottom:1px solid #EEE; display:flex; align-items:center; justify-content:space-between; }
+  .detail-header .back { font-size:14px; color:#999; cursor:pointer; font-weight:600; }
+  .detail-header .back:hover { color:#666; }
+  .detail-header .order-id { font-size:18px; font-weight:800; }
+  .detail-header .reprint { font-size:13px; color:#D32F2F; font-weight:700; cursor:pointer; }
+  .detail-header .reprint:hover { opacity:0.7; }
+  .detail-body { padding:20px 24px; }
+  .status-bar { display:flex; gap:4px; margin-bottom:12px; }
+  .status-step { flex:1; display:flex; flex-direction:column; align-items:center; }
+  .status-step .bar { width:100%; height:4px; border-radius:2px; margin-bottom:4px; }
+  .status-step .step-label { font-size:10px; }
+  .detail-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .total-row { border-top:1px solid #EEE; margin-top:12px; padding-top:12px; display:flex; justify-content:space-between; }
+  .total-row .total-label { font-weight:800; font-size:15px; }
+  .total-row .total-value { font-weight:800; font-size:18px; }
+  .detail-action { padding:14px 0; border-radius:12px; text-align:center; font-weight:800; font-size:15px; cursor:pointer; transition:opacity 0.15s; }
+  .detail-action:hover { opacity:0.85; }
+  .detail-action.dark { background:#1A1A1A; color:#fff; margin-bottom:8px; }
+  .detail-action.cancel { color:#D32F2F; background:#FFEBEE; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">🔥</div>
+    <div id="nav-items"></div>
+    <div class="test-btn" onclick="simulateNewOrder()">🔔<br>テスト</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header" id="header">
+      <div class="store-name">炭火亭 渋谷店</div>
+      <div class="pause-label" id="pause-label">⏸ 一時休止中</div>
+      <div class="header-spacer"></div>
+      <div class="header-btn" onclick="togglePrinter()">
+        <span style="font-size:16px">🖨</span>
+        <span class="printer-dot" id="printer-dot"></span>
+        <span id="printer-text">接続中</span>
+      </div>
+      <div class="header-btn" style="position:relative" id="notif-btn">
+        <span style="font-size:16px">🔔</span>
+        <span class="notif-badge" id="notif-badge"></span>
+      </div>
+      <div style="position:relative">
+        <div class="pause-toggle" id="pause-toggle" onclick="togglePause()"></div>
+        <div class="pause-menu" id="pause-menu" style="display:none">
+          <div class="pause-menu-title">一時休止</div>
+          <div class="pause-menu-item" onclick="doPause('10分間')">10分間</div>
+          <div class="pause-menu-item" onclick="doPause('30分間')">30分間</div>
+          <div class="pause-menu-item" onclick="doPause('60分間')">60分間</div>
+          <div class="pause-menu-item" onclick="doPause('本日以降')">本日以降</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters" id="filters"></div>
+    <div class="cards-area">
+      <div class="cards-grid" id="cards-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlays container -->
+<div id="overlays"></div>
+
+<script>
+const BRAND = "#D32F2F";
+const STATUS = {
+  new:       { label:"新規",    color:"#D32F2F", bg:"#FFEBEE", icon:"●" },
+  cooking:   { label:"調理中",  color:"#F57C00", bg:"#FFF3E0", icon:"●" },
+  ready:     { label:"完成",    color:"#388E3C", bg:"#E8F5E9", icon:"●" },
+  delivered: { label:"受渡済",  color:"#757575", bg:"#F5F5F5", icon:"✓" },
+  cancelled: { label:"キャンセル", color:"#9E9E9E", bg:"#FAFAFA", icon:"✕" },
+};
+const TYPE_ICON  = { dine:"🍽", takeout:"🥡", delivery:"🛵" };
+const TYPE_LABEL = { dine:"店内", takeout:"持帰り", delivery:"デリバリー" };
+const NEXT_LABEL = { new:"受注する", cooking:"完成にする", ready:"受渡済にする" };
+const FLOW = ["new","cooking","ready","delivered"];
+const NAV = [
+  { id:"orders", icon:"📋", label:"注文" },
+  { id:"reserve", icon:"📅", label:"予約" },
+  { id:"soldout", icon:"🚫", label:"品切れ" },
+  { id:"history", icon:"📊", label:"履歴" },
+  { id:"settings", icon:"⚙", label:"設定" },
+];
+const FILTERS = [
+  { id:"all", label:"すべて" },
+  { id:"new", label:"新規" },
+  { id:"cooking", label:"調理中" },
+  { id:"ready", label:"完成" },
+  { id:"delivered", label:"受渡済" },
+];
+
+let orders = [
+  { id:"0048", status:"new", type:"delivery", channel:"AIden", time:"16:30", total:4100, items:[
+    { name:"黒毛和牛 特上カルビ", qty:1, price:2800, options:["焼き加減: ミディアムレア","ガーリックバター +¥200"] },
+    { name:"石焼ビビンバ", qty:1, price:900, options:[] }], note:"玄関前に置いてください", customer:"東京都渋谷区道玄坂1-12-5", orderTime:"16:05" },
+  { id:"0047", status:"new", type:"takeout", channel:"AIden", time:"16:15", total:1800, items:[
+    { name:"特上タン塩", qty:2, price:900, options:[] }], note:"", customer:"", orderTime:"16:02" },
+  { id:"0046", status:"new", type:"delivery", channel:"AIden", time:"16:45", total:5200, items:[
+    { name:"炭火コース", qty:1, price:4800, options:[] },
+    { name:"ガーリックバター", qty:2, price:200, options:[] }], note:"インターホンを鳴らしてください", customer:"東京都渋谷区恵比寿1-3-8", orderTime:"16:00" },
+  { id:"0045", status:"cooking", type:"takeout", channel:"AIden", time:"16:00", total:2400, items:[
+    { name:"黒毛和牛 上ロース", qty:1, price:2200, options:[] },
+    { name:"ガーリックバター", qty:1, price:200, options:[] }], note:"", customer:"", orderTime:"15:42" },
+  { id:"0044", status:"cooking", type:"dine", channel:"AIden QR", time:"—", total:5400, items:[
+    { name:"炭火コース", qty:1, price:4800, options:[] },
+    { name:"ドリンクセット", qty:1, price:600, options:[] }], note:"テーブル3", customer:"", orderTime:"15:38" },
+  { id:"0043", status:"cooking", type:"delivery", channel:"AIden", time:"16:10", total:3600, items:[
+    { name:"特上タン塩", qty:2, price:900, options:[] },
+    { name:"石焼ビビンバ", qty:2, price:900, options:[] }], note:"", customer:"東京都渋谷区桜丘町2-5", orderTime:"15:35" },
+  { id:"0042", status:"ready", type:"takeout", channel:"AIden", time:"15:45", total:1200, items:[
+    { name:"ハラミ", qty:1, price:1200, options:[] }], note:"", customer:"", orderTime:"15:20" },
+  { id:"0041", status:"ready", type:"delivery", channel:"AIden", time:"15:50", total:2800, items:[
+    { name:"黒毛和牛 特上カルビ", qty:1, price:2800, options:[] }], note:"", customer:"東京都渋谷区宇田川町3-1", orderTime:"15:15" },
+  { id:"0040", status:"delivered", type:"takeout", channel:"AIden", time:"15:30", total:900, items:[
+    { name:"石焼ビビンバ", qty:1, price:900, options:[] }], note:"", customer:"", orderTime:"15:00" },
+  { id:"0039", status:"delivered", type:"dine", channel:"AIden QR", time:"—", total:9600, items:[
+    { name:"炭火コース", qty:2, price:4800, options:[] }], note:"", customer:"", orderTime:"14:30" },
+  { id:"0038", status:"cancelled", type:"delivery", channel:"AIden", time:"15:20", total:3200, items:[
+    { name:"黒毛和牛 上ロース", qty:1, price:2200, options:[] },
+    { name:"冷麺", qty:1, price:880, options:[] }], note:"", customer:"", orderTime:"14:50" },
+];
+
+let activeNav = "orders";
+let activeFilter = "all";
+let isPaused = false;
+let printerOk = true;
+
+function newCount(){ return orders.filter(o=>o.status==="new").length; }
+function yen(n){ return "¥"+n.toLocaleString(); }
+
+// ── Render Nav ──
+function renderNav(){
+  const c = document.getElementById("nav-items");
+  c.innerHTML = NAV.map(n=>{
+    const active = n.id===activeNav;
+    const badge = n.id==="orders"?newCount():n.id==="soldout"?1:0;
+    return `<div class="nav-item ${active?'active':''}" onclick="setNav('${n.id}')">
+      <div class="icon">${n.icon}</div><div class="label">${n.label}</div>
+      ${badge>0?`<div class="nav-badge">${badge}</div>`:''}
+    </div>`;
+  }).join("");
+}
+
+function setNav(id){ activeNav=id; renderNav(); }
+
+// ── Render Header ──
+function renderHeader(){
+  const h = document.getElementById("header");
+  h.className = "header"+(isPaused?" paused":"");
+  document.getElementById("printer-dot").className = "printer-dot "+(printerOk?"ok":"err");
+  document.getElementById("printer-text").textContent = printerOk?"接続中":"未接続";
+  const nc = newCount();
+  document.getElementById("notif-badge").textContent = nc>0?nc:"";
+  document.getElementById("notif-badge").style.display = nc>0?"flex":"none";
+  document.getElementById("pause-toggle").textContent = isPaused?"▶ 受付再開":"⏸ 受付中";
+}
+
+function togglePrinter(){ printerOk=!printerOk; renderHeader(); }
+function togglePause(){
+  if(isPaused){ isPaused=false; renderHeader(); }
+  else {
+    const m=document.getElementById("pause-menu");
+    m.style.display = m.style.display==="none"?"block":"none";
+  }
+}
+function doPause(t){ isPaused=true; document.getElementById("pause-menu").style.display="none"; renderHeader(); }
+
+// ── Render Filters ──
+function renderFilters(){
+  const c = document.getElementById("filters");
+  c.innerHTML = FILTERS.map(f=>{
+    const active = f.id===activeFilter;
+    const count = f.id==="all"?orders.filter(o=>o.status!=="cancelled").length:orders.filter(o=>o.status===f.id).length;
+    const dot = f.id==="new"&&count>0?`<span class="pulse-dot"></span>`:"";
+    return `<div class="filter-tab ${active?'active':''}" onclick="setFilter('${f.id}')">
+      ${f.label}<span class="filter-count">(${count})</span>${dot}
+    </div>`;
+  }).join("");
+}
+
+function setFilter(id){ activeFilter=id; renderFilters(); renderCards(); }
+
+// ── Render Cards ──
+function renderCards(){
+  const filtered = activeFilter==="all"
+    ? orders.filter(o=>o.status!=="cancelled")
+    : orders.filter(o=>o.status===activeFilter);
+  const c = document.getElementById("cards-grid");
+  c.innerHTML = filtered.map(o=>{
+    const s = STATUS[o.status];
+    const nl = NEXT_LABEL[o.status]||"";
+    const itemsHtml = o.items.slice(0,2).map(i=>`<div>${i.name} ×${i.qty}</div>`).join("")
+      + (o.items.length>2?`<div class="more">他 ${o.items.length-2}品</div>`:"");
+    return `<div class="order-card ${o.status==='new'?'status-new':''}" onclick="showDetail('${o.id}')">
+      <div class="card-strip" style="background:${s.color}"></div>
+      <div class="card-header">
+        <span class="status-tag" style="color:${s.color};background:${s.bg}">${s.icon} ${s.label}</span>
+        <span class="order-num">#${o.id}</span>
+      </div>
+      <div class="card-type">
+        <span class="emoji">${TYPE_ICON[o.type]}</span>
+        <span class="type-name">${TYPE_LABEL[o.type]}</span>
+        <span class="channel">${o.channel}</span>
+      </div>
+      ${o.time!=="—"?`<div class="card-time"><span class="time-label">受渡</span><span class="time-val">${o.time}</span></div>`:""}
+      <div class="card-items">${itemsHtml}</div>
+      <div class="card-total">${yen(o.total)}</div>
+      ${o.note?`<div class="card-note">📝 メモあり</div>`:""}
+      ${nl?`<div class="card-action ${o.status==='new'?'primary':'dark'}" onclick="event.stopPropagation();advanceStatus('${o.id}')">${nl}</div>`:""}
+    </div>`;
+  }).join("");
+}
+
+function advanceStatus(id){
+  orders = orders.map(o=>{
+    if(o.id!==id) return o;
+    const idx = FLOW.indexOf(o.status);
+    return idx<FLOW.length-1?{...o, status:FLOW[idx+1]}:o;
+  });
+  renderAll();
+  closeOverlays();
+}
+
+// ── New Order Popup ──
+function simulateNewOrder(){
+  const types = ["delivery","takeout","dine"];
+  const t = types[Math.floor(Math.random()*3)];
+  const id = String(Math.max(...orders.map(o=>parseInt(o.id)))+1).padStart(4,"0");
+  const now = new Date();
+  const o = { id, status:"new", type:t, channel:"AIden",
+    time: t==="dine"?"—":`${now.getHours()}:${String(now.getMinutes()+30).padStart(2,'0')}`,
+    total:3400, items:[
+      { name:"黒毛和牛 特上カルビ", qty:1, price:2800, options:["焼き加減: ミディアムレア"] },
+      { name:"ガーリックバター", qty:3, price:200, options:[] }
+    ], note:t==="delivery"?"玄関前に置いてください":"", customer:t==="delivery"?"東京都渋谷区神南1-2-3":"",
+    orderTime:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
+  };
+  showNewOrderPopup(o);
+}
+
+function showNewOrderPopup(o){
+  const itemsHtml = o.items.map(i=>`
+    <div class="item-row"><span class="name">${i.name} <span class="qty">×${i.qty}</span></span><span class="price">${yen(i.price*i.qty)}</span></div>
+    ${i.options.map(op=>`<div class="item-option">└ ${op}</div>`).join("")}
+  `).join("");
+  document.getElementById("overlays").innerHTML = `
+    <div class="overlay">
+      <div class="popup">
+        <div class="popup-header"><div class="bell">🔔</div><div class="title">新しい注文が入りました</div></div>
+        <div class="popup-body">
+          <div class="info-grid">
+            <div class="info-box"><div class="info-label">注文番号</div><div class="info-value lg">#${o.id}</div></div>
+            <div class="info-box"><div class="info-label">合計</div><div class="info-value lg">${yen(o.total)}</div></div>
+          </div>
+          <div class="info-grid-3">
+            <div class="info-box"><div class="info-label">種別</div><div class="info-value">${TYPE_ICON[o.type]} ${TYPE_LABEL[o.type]}</div></div>
+            <div class="info-box"><div class="info-label">受渡予定</div><div class="info-value">${o.time}</div></div>
+            <div class="info-box"><div class="info-label">媒体</div><div class="info-value">${o.channel}</div></div>
+          </div>
+          <div style="border-top:1px solid #EEE;padding-top:12px;margin-bottom:12px">
+            <div class="section-title">注文内容</div>${itemsHtml}
+          </div>
+          ${o.note?`<div class="note-box yellow"><span class="note-label">📝 お客様メモ: </span>${o.note}</div>`:""}
+          ${o.type==="delivery"&&o.customer?`<div class="note-box blue"><span class="note-label">📍 お届け先: </span>${o.customer}</div>`:""}
+          <div class="popup-actions">
+            <div class="btn secondary" onclick="showCancelDialog('${o.id}',true)">キャンセル</div>
+            <div class="btn primary" onclick="acceptOrder('${o.id}')">✅ 受注する</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  // Store pending order
+  window._pendingOrder = o;
+}
+
+function acceptOrder(id){
+  const o = window._pendingOrder;
+  if(o){ orders.unshift({...o, status:"cooking"}); }
+  closeOverlays();
+  renderAll();
+}
+
+function showCancelDialog(id, fromPopup){
+  const reasons = ["品切れ","営業時間外","店舗都合","その他"];
+  document.getElementById("overlays").innerHTML = `
+    <div class="overlay">
+      <div class="cancel-dialog">
+        <div class="dialog-title">キャンセル理由</div>
+        <div class="dialog-sub">#${id} のキャンセル理由を選択してください</div>
+        ${reasons.map(r=>`<div class="cancel-reason" onclick="confirmCancel('${id}',${fromPopup})">${r}</div>`).join("")}
+        <div class="cancel-back" onclick="${fromPopup?`showNewOrderPopup(window._pendingOrder)`:`closeOverlays()`}">戻る</div>
+      </div>
+    </div>`;
+}
+
+function confirmCancel(id, fromPopup){
+  if(fromPopup && window._pendingOrder){
+    orders.unshift({...window._pendingOrder, status:"cancelled"});
+  } else {
+    orders = orders.map(o=>o.id===id?{...o,status:"cancelled"}:o);
+  }
+  closeOverlays();
+  renderAll();
+}
+
+// ── Detail Panel ──
+function showDetail(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+  const s = STATUS[o.status];
+  const statusBar = FLOW.map((st,i)=>{
+    const ci = FLOW.indexOf(o.status);
+    const done = i<=ci;
+    return `<div class="status-step">
+      <div class="bar" style="background:${done?STATUS[st].color:'#E0E0E0'}"></div>
+      <span class="step-label" style="font-weight:${done?700:400};color:${done?STATUS[st].color:'#CCC'}">${STATUS[st].label}</span>
+    </div>`;
+  }).join("");
+  const itemsHtml = o.items.map(i=>`
+    <div style="margin-bottom:8px">
+      <div class="item-row"><span class="name">${i.name} <span class="qty">×${i.qty}</span></span><span class="price">${yen(i.price*i.qty)}</span></div>
+      ${(i.options||[]).map(op=>`<div class="item-option">└ ${op}</div>`).join("")}
+    </div>`).join("");
+  const nl = NEXT_LABEL[o.status]||"";
+  const canCancel = o.status!=="delivered"&&o.status!=="cancelled";
+  document.getElementById("overlays").innerHTML = `
+    <div class="detail-overlay" onclick="closeOverlays()">
+      <div class="detail-panel" onclick="event.stopPropagation()">
+        <div class="detail-header">
+          <div class="back" onclick="closeOverlays()">← 戻る</div>
+          <div class="order-id">#${o.id}</div>
+          <div class="reprint">🖨 再印刷</div>
+        </div>
+        <div class="detail-body">
+          <div style="margin-bottom:20px">
+            <div class="section-title">ステータス</div>
+            <div class="status-bar">${statusBar}</div>
+          </div>
+          <div class="detail-info-grid">
+            <div class="info-box"><div class="info-label">注文種別</div><div class="info-value">${TYPE_ICON[o.type]} ${TYPE_LABEL[o.type]}</div></div>
+            <div class="info-box"><div class="info-label">受注媒体</div><div class="info-value">${o.channel}</div></div>
+            <div class="info-box"><div class="info-label">注文日時</div><div class="info-value">${o.orderTime}</div></div>
+            <div class="info-box"><div class="info-label">受渡予定</div><div class="info-value">${o.time}</div></div>
+          </div>
+          <div style="margin-bottom:20px">
+            <div class="section-title">注文内容</div>
+            ${itemsHtml}
+            <div class="total-row"><span class="total-label">合計</span><span class="total-value">${yen(o.total)}</span></div>
+          </div>
+          ${o.note?`<div class="note-box yellow"><span class="note-label">📝 </span>${o.note}</div>`:""}
+          ${o.type==="delivery"&&o.customer?`<div class="note-box blue"><span class="note-label">📍 お届け先: </span>${o.customer}</div>`:""}
+          <div style="margin-top:16px">
+            ${nl?`<div class="detail-action dark" onclick="advanceStatus('${o.id}')">${nl}</div>`:""}
+            ${canCancel?`<div class="detail-action cancel" onclick="showCancelDialog('${o.id}',false)">この注文をキャンセル</div>`:""}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function closeOverlays(){ document.getElementById("overlays").innerHTML=""; }
+
+// ── Render All ──
+function renderAll(){ renderNav(); renderHeader(); renderFilters(); renderCards(); }
+renderAll();
+
+// Close pause menu on outside click
+document.addEventListener("click", e=>{
+  if(!e.target.closest("#pause-toggle")&&!e.target.closest("#pause-menu")){
+    document.getElementById("pause-menu").style.display="none";
+  }
+});
+</script>
+</body>
+</html>
