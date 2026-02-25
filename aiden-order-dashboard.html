@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1024">
-<title>AIden 受注ダッシュボード v0.12</title>
+<title>AIden 受注ダッシュボード v0.13</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -70,7 +70,7 @@ body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;backgrou
 .section-scroll{flex:1;overflow-y:auto;min-height:0}
 
 /* TABLE */
-.otable{width:100%;border-collapse:separate;border-spacing:0 2px;padding:0 4px}
+.otable{width:100%;border-collapse:separate;border-spacing:0 2px;padding:0 4px;table-layout:fixed}
 .otable th{font-size:9px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:1px;padding:4px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;background:#fff;z-index:2}
 .otable th.r{text-align:right}
 .orow{cursor:pointer;transition:all .12s}
@@ -266,9 +266,9 @@ body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;backgrou
         </div>
         <div class="section-scroll">
           <table class="otable"><thead><tr>
-            <th style="width:52px">状態</th><th style="width:64px">注文番号</th><th style="width:60px">種別</th>
-            <th style="width:50px">媒体</th><th>注文内容</th><th style="width:68px">提供時間</th>
-            <th style="width:76px" class="r">合計金額</th><th style="width:90px"></th>
+            <th style="width:56px">状態</th><th style="width:68px">注文番号</th><th style="width:64px">種別</th>
+            <th style="width:52px">媒体</th><th>注文内容</th><th style="width:68px">提供時間</th>
+            <th style="width:76px" class="r">合計金額</th><th style="width:88px"></th>
           </tr></thead><tbody id="tbDine"></tbody></table>
         </div>
       </div>
@@ -282,9 +282,9 @@ body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;backgrou
         </div>
         <div class="section-scroll">
           <table class="otable"><thead><tr>
-            <th style="width:52px">状態</th><th style="width:64px">注文番号</th><th style="width:60px">種別</th>
-            <th style="width:50px">媒体</th><th>注文内容</th><th style="width:68px">提供時間</th>
-            <th style="width:76px" class="r">合計金額</th><th style="width:90px"></th>
+            <th style="width:56px">状態</th><th style="width:68px">注文番号</th><th style="width:64px">種別</th>
+            <th style="width:52px">媒体</th><th>注文内容</th><th style="width:68px">提供時間</th>
+            <th style="width:76px" class="r">合計金額</th><th style="width:88px"></th>
           </tr></thead><tbody id="tbExt"></tbody></table>
         </div>
       </div>
@@ -359,9 +359,9 @@ body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;backgrou
   </div>
   <div class="expand-popup-body">
     <table class="otable" style="width:100%"><thead><tr>
-      <th style="width:60px">状態</th><th style="width:72px">注文番号</th><th style="width:70px">種別</th>
-      <th style="width:56px">媒体</th><th>注文内容</th><th style="width:72px">提供時間</th>
-      <th style="width:80px" class="r">合計金額</th><th style="width:100px"></th>
+      <th style="width:56px">状態</th><th style="width:68px">注文番号</th><th style="width:64px">種別</th>
+      <th style="width:52px">媒体</th><th>注文内容</th><th style="width:68px">提供時間</th>
+      <th style="width:76px" class="r">合計金額</th><th style="width:88px"></th>
     </tr></thead><tbody id="tbExp"></tbody></table>
   </div>
 </div>
