@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIden 顧客管理画面</title>
+<style>
+:root {
+  --primary: #1a1a2e;
+  --primary-light: #16213e;
+  --accent: #e94560;
+  --accent-hover: #c81e45;
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --text: #2d3436;
+  --text-light: #636e72;
+  --border: #e0e0e0;
+  --sidebar-w: 260px;
+  --header-h: 56px;
+  --success: #00b894;
+  --warning: #fdcb6e;
+  --danger: #d63031;
+  --info: #0984e3;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans JP','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
+
+/* === HEADER === */
+.header { position:fixed; top:0; left:0; right:0; height:var(--header-h); background:var(--primary); color:#fff; display:flex; align-items:center; padding:0 20px; z-index:100; gap:16px; }
+.header-logo { font-size:20px; font-weight:700; letter-spacing:1px; color:var(--accent); }
+.header-logo span { color:#fff; font-weight:300; font-size:13px; margin-left:8px; }
+.header-selectors { display:flex; gap:8px; margin-left:24px; }
+.header-selectors select { padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:var(--primary-light); color:#fff; font-size:12px; cursor:pointer; }
+.header-right { margin-left:auto; display:flex; align-items:center; gap:16px; }
+.header-user { display:flex; align-items:center; gap:8px; font-size:12px; }
+.header-user .avatar { width:32px; height:32px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+
+/* === SIDEBAR === */
+.sidebar { position:fixed; top:var(--header-h); left:0; width:var(--sidebar-w); height:calc(100vh - var(--header-h)); background:var(--primary); overflow-y:auto; z-index:90; }
+.sidebar::-webkit-scrollbar { width:4px; }
+.sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.2); border-radius:4px; }
+.nav-category { border-bottom:1px solid rgba(255,255,255,0.06); }
+.nav-cat-header { display:flex; align-items:center; padding:12px 16px; cursor:pointer; color:rgba(255,255,255,0.7); font-size:13px; font-weight:500; transition:all .2s; gap:10px; }
+.nav-cat-header:hover { background:rgba(255,255,255,0.05); color:#fff; }
+.nav-cat-header.active { color:#fff; background:rgba(233,69,96,0.15); }
+.nav-cat-header .icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
+.nav-cat-header .label { flex:1; }
+.nav-cat-header .arrow { font-size:10px; transition:transform .2s; }
+.nav-cat-header.open .arrow { transform:rotate(90deg); }
+.nav-subitems { display:none; background:rgba(0,0,0,0.15); }
+.nav-subitems.open { display:block; }
+.nav-subitem { padding:9px 16px 9px 50px; color:rgba(255,255,255,0.5); font-size:12px; cursor:pointer; transition:all .15s; }
+.nav-subitem:hover { color:rgba(255,255,255,0.8); background:rgba(255,255,255,0.03); }
+.nav-subitem.active { color:var(--accent); background:rgba(233,69,96,0.1); }
+
+/* === CONTENT === */
+.content { margin-left:var(--sidebar-w); margin-top:var(--header-h); padding:24px; min-height:calc(100vh - var(--header-h)); }
+.page { display:none; }
+.page.active { display:block; }
+.page-title { font-size:20px; font-weight:700; margin-bottom:4px; }
+.page-subtitle { font-size:13px; color:var(--text-light); margin-bottom:24px; }
+.breadcrumb { font-size:11px; color:var(--text-light); margin-bottom:16px; }
+.breadcrumb a { color:var(--accent); text-decoration:none; }
+
+/* === CARDS / FORMS === */
+.card { background:var(--card); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+.card-title { font-size:15px; font-weight:700; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group.full { grid-column:1/-1; }
+.form-group label { font-size:12px; font-weight:600; color:var(--text-light); }
+.form-group label .req { color:var(--accent); margin-left:2px; }
+.form-group input, .form-group select, .form-group textarea {
+  padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; transition:border-color .2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:var(--accent); }
+.form-group textarea { resize:vertical; min-height:60px; }
+
+/* === TOGGLES === */
+.toggle-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0; }
+.toggle-row:last-child { border-bottom:none; }
+.toggle-row .label { font-size:13px; }
+.toggle { position:relative; width:40px; height:22px; cursor:pointer; }
+.toggle input { display:none; }
+.toggle .slider { position:absolute; inset:0; background:#ccc; border-radius:22px; transition:.2s; }
+.toggle .slider:before { content:''; position:absolute; width:18px; height:18px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.2s; }
+.toggle input:checked+.slider { background:var(--accent); }
+.toggle input:checked+.slider:before { transform:translateX(18px); }
+
+/* === TABLES === */
+.data-table { width:100%; border-collapse:collapse; font-size:12px; }
+.data-table th { background:#f8f9fa; padding:10px 12px; text-align:left; font-weight:600; color:var(--text-light); border-bottom:2px solid var(--border); position:sticky; top:0; }
+.data-table td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+.data-table tr:hover td { background:#fafbfc; }
+
+/* === BUTTONS === */
+.btn { padding:8px 16px; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; font-family:inherit; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent-hover); }
+.btn-secondary { background:#f0f0f0; color:var(--text); }
+.btn-secondary:hover { background:#e0e0e0; }
+.btn-danger { background:var(--danger); color:#fff; }
+.btn-danger:hover { background:#c0392b; }
+.btn-sm { padding:5px 10px; font-size:11px; }
+.btn-group { display:flex; gap:8px; margin-top:16px; }
+
+/* === BADGES === */
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.badge-success { background:#e8f5e9; color:#2e7d32; }
+.badge-warning { background:#fff3e0; color:#e65100; }
+.badge-danger { background:#ffebee; color:#c62828; }
+.badge-info { background:#e3f2fd; color:#1565c0; }
+
+/* === TABS === */
+.sub-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:20px; }
+.sub-tab { padding:10px 18px; font-size:13px; font-weight:500; color:var(--text-light); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; }
+.sub-tab:hover { color:var(--text); }
+.sub-tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+.sub-panel { display:none; }
+.sub-panel.active { display:block; }
+
+/* === STATS === */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.stat-card { background:var(--card); border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+.stat-card .stat-label { font-size:11px; color:var(--text-light); margin-bottom:4px; }
+.stat-card .stat-value { font-size:24px; font-weight:700; }
+.stat-card .stat-change { font-size:11px; margin-top:4px; }
+.stat-card .stat-change.up { color:var(--success); }
+.stat-card .stat-change.down { color:var(--danger); }
+
+/* === COLOR PICKER === */
+.color-input-group { display:flex; align-items:center; gap:8px; }
+.color-input-group input[type=color] { width:36px; height:36px; border:1px solid var(--border); border-radius:6px; cursor:pointer; padding:2px; }
+.color-input-group input[type=text] { width:100px; }
+
+/* === UPLOAD AREA === */
+.upload-area { border:2px dashed var(--border); border-radius:8px; padding:24px; text-align:center; color:var(--text-light); cursor:pointer; transition:all .2s; }
+.upload-area:hover { border-color:var(--accent); color:var(--accent); }
+.upload-area .icon { font-size:28px; margin-bottom:8px; }
+
+/* === TAG === */
+.tag { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; margin:2px; background:#f0f0f0; }
+.tag.selected { background:var(--accent); color:#fff; }
+
+/* === SEARCH BAR === */
+.search-bar { display:flex; gap:8px; margin-bottom:16px; }
+.search-bar input { flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+.search-bar input:focus { outline:none; border-color:var(--accent); }
+
+/* === PLACEHOLDER === */
+.placeholder-section { padding:40px; text-align:center; color:var(--text-light); }
+.placeholder-section .icon { font-size:48px; margin-bottom:12px; }
+.placeholder-section p { font-size:14px; }
+
+/* === CHART PLACEHOLDER === */
+.chart-placeholder { height:250px; background:linear-gradient(135deg,#f8f9fa,#e9ecef); border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:13px; }
+
+/* === MODAL === */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:#fff; border-radius:12px; padding:24px; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; }
+.modal-title { font-size:18px; font-weight:700; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+.modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-light); }
+
+/* scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-thumb { background:#ccc; border-radius:6px; }
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-logo">AIden<span>顧客管理画面</span></div>
+  <div class="header-selectors">
+    <select id="brandSelector">
+      <option>🏷 スシロー</option>
+      <option>🏷 炭火亭</option>
+    </select>
+    <select id="storeSelector">
+      <option value="all">全店舗</option>
+      <option>📍 渋谷店</option>
+      <option>📍 新宿店</option>
+      <option>📍 池袋店</option>
+    </select>
+  </div>
+  <div class="header-right">
+    <span style="font-size:11px;opacity:.6">最終ログイン: 2026/03/01 10:30</span>
+    <div class="header-user">
+      <div class="avatar">T</div>
+      <div>
+        <div style="font-weight:600">田中太郎</div>
+        <div style="font-size:10px;opacity:.6">ブランドオーナー</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ========== SIDEBAR ========== -->
+<nav class="sidebar" id="sidebar"></nav>
+
+<!-- ========== CONTENT ========== -->
+<main class="content" id="content"></main>
+
+<script>
+// ===== NAVIGATION STRUCTURE =====
+const NAV = [
+  { id:'store', icon:'🏪', label:'店舗管理', subs:[
+    {id:'store-basic', label:'基本情報'},
+    {id:'store-hours', label:'営業時間'},
+    {id:'store-facility', label:'施設設備'},
+    {id:'store-delivery', label:'配達設定'},
+    {id:'store-cancel', label:'キャンセルポリシー'},
+    {id:'store-media', label:'メディア'},
+    {id:'store-feature', label:'機能設定'},
+  ]},
+  { id:'menu', icon:'📋', label:'メニュー管理', subs:[]},
+  { id:'sales', icon:'📊', label:'売上・分析', subs:[
+    {id:'sales-report', label:'売上レポート'},
+    {id:'sales-ai', label:'AI売上分析'},
+    {id:'sales-market', label:'AI市場分析'},
+  ]},
+  { id:'brand', icon:'🎨', label:'ブランドHP', subs:[
+    {id:'brand-design', label:'デザイン設定'},
+    {id:'brand-top', label:'トップページCMS'},
+    {id:'brand-news', label:'ニュース管理'},
+    {id:'brand-coupon', label:'クーポン管理'},
+  ]},
+  { id:'member', icon:'👥', label:'会員・CRM', subs:[
+    {id:'member-list', label:'会員一覧'},
+    {id:'member-point', label:'ポイント設定'},
+    {id:'member-rank', label:'ランク設定'},
+    {id:'member-crm', label:'CRM配信'},
+  ]},
+  { id:'ai', icon:'🤖', label:'AI・SNS', subs:[
+    {id:'ai-sns', label:'SNS管理'},
+    {id:'ai-content', label:'告知コンテンツ生成'},
+    {id:'ai-crm', label:'AI CRM分析'},
+  ]},
+  { id:'subscription', icon:'💎', label:'サブスク', subs:[
+    {id:'sub-plan', label:'プラン設計'},
+    {id:'sub-members', label:'加入者一覧'},
+    {id:'sub-report', label:'売上レポート'},
+  ]},
+  { id:'review', icon:'⭐', label:'口コミ', subs:[
+    {id:'review-setting', label:'ポイント設定'},
+    {id:'review-list', label:'投稿一覧'},
+  ]},
+  { id:'support', icon:'💬', label:'サポート', subs:[
+    {id:'support-setting', label:'チャット設定'},
+    {id:'support-history', label:'チャット履歴'},
+  ]},
+  { id:'ban', icon:'⛔', label:'BAN管理', subs:[
+    {id:'ban-execute', label:'BAN実行'},
+    {id:'ban-list', label:'BANリスト'},
+  ]},
+];
+
+// ===== BUILD SIDEBAR =====
+const sidebar = document.getElementById('sidebar');
+let sidebarHTML = '';
+NAV.forEach(cat => {
+  const hasSubs = cat.subs.length > 0;
+  sidebarHTML += `<div class="nav-category" data-cat="${cat.id}">
+    <div class="nav-cat-header" onclick="navClick('${cat.id}',${hasSubs})" data-cat="${cat.id}">
+      <span class="icon">${cat.icon}</span>
+      <span class="label">${cat.label}</span>
+      ${hasSubs ? '<span class="arrow">▶</span>' : ''}
+    </div>`;
+  if(hasSubs){
+    sidebarHTML += `<div class="nav-subitems" data-cat="${cat.id}">`;
+    cat.subs.forEach(sub => {
+      sidebarHTML += `<div class="nav-subitem" data-page="${sub.id}" onclick="showPage('${sub.id}','${cat.id}')">${sub.label}</div>`;
+    });
+    sidebarHTML += `</div>`;
+  }
+  sidebarHTML += `</div>`;
+});
+sidebar.innerHTML = sidebarHTML;
+
+// ===== NAVIGATION LOGIC =====
+let currentCat = null;
+function navClick(catId, hasSubs){
+  const header = document.querySelector(`.nav-cat-header[data-cat="${catId}"]`);
+  if(hasSubs){
+    header.classList.toggle('open');
+    const subs = document.querySelector(`.nav-subitems[data-cat="${catId}"]`);
+    subs.classList.toggle('open');
+    // auto-select first sub if opening
+    if(subs.classList.contains('open')){
+      const firstSub = NAV.find(c=>c.id===catId).subs[0];
+      if(firstSub) showPage(firstSub.id, catId);
+    }
+  } else {
+    showPage(catId, catId);
+  }
+}
+
+function showPage(pageId, catId){
+  // update sidebar active states
+  document.querySelectorAll('.nav-cat-header').forEach(h=>h.classList.remove('active'));
+  document.querySelectorAll('.nav-subitem').forEach(s=>s.classList.remove('active'));
+  document.querySelector(`.nav-cat-header[data-cat="${catId}"]`).classList.add('active');
+  const subEl = document.querySelector(`.nav-subitem[data-page="${pageId}"]`);
+  if(subEl) subEl.classList.add('active');
+  // show page
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const page = document.getElementById('page-'+pageId);
+  if(page) page.classList.add('active');
+  currentCat = catId;
+}
+
+// ===== BUILD CONTENT PAGES =====
+const content = document.getElementById('content');
+content.innerHTML = `
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - 基本情報 -->
+<!-- ============================== -->
+<div class="page" id="page-store-basic">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ 基本情報</div>
+  <div class="page-title">店舗基本情報</div>
+  <div class="page-subtitle">店舗の基本情報を管理します</div>
+
+  <div class="card">
+    <div class="card-title">📍 基本情報</div>
+    <div class="form-grid">
+      <div class="form-group"><label>店舗名<span class="req">*</span></label><input type="text" value="スシロー 渋谷店"></div>
+      <div class="form-group"><label>店舗読み仮名</label><input type="text" value="すしろー しぶやてん"></div>
+      <div class="form-group"><label>電話番号<span class="req">*</span></label><input type="tel" value="03-1234-5678"></div>
+      <div class="form-group"><label>メールアドレス</label><input type="email" value="shibuya@sushiro.co.jp"></div>
+      <div class="form-group full"><label>住所<span class="req">*</span></label><input type="text" value="東京都渋谷区道玄坂1-2-3 渋谷ビル2F"></div>
+      <div class="form-group"><label>最寄り駅/アクセス</label><input type="text" value="渋谷駅 ハチ公口 徒歩3分"></div>
+      <div class="form-group"><label>Google Place ID</label><input type="text" value="ChIJxxxxxxxxxxxxxx" placeholder="Google Place ID"></div>
+      <div class="form-group"><label>緯度</label><input type="text" value="35.6595"></div>
+      <div class="form-group"><label>経度</label><input type="text" value="139.7005"></div>
+      <div class="form-group"><label>ジャンル（大分類）<span class="req">*</span></label>
+        <select><option>和食</option><option>洋食</option><option>中華</option><option>イタリアン</option><option>フレンチ</option><option>焼肉</option><option>ラーメン・麺類</option><option>居酒屋</option><option>カフェ</option><option>バー</option><option>寿司</option><option>韓国料理</option><option>エスニック</option><option>その他</option></select>
+      </div>
+      <div class="form-group"><label>ジャンル（小分類）</label>
+        <select><option>回転寿司</option><option>握り寿司</option><option>押し寿司</option><option>その他</option></select>
+      </div>
+      <div class="form-group"><label>価格帯</label>
+        <select><option>〜¥1,000</option><option>¥1,000〜¥2,000</option><option>¥2,000〜¥3,000</option><option>¥3,000〜¥5,000</option><option>¥5,000〜¥10,000</option><option>¥10,000〜</option></select>
+      </div>
+      <div class="form-group full"><label>店舗紹介文</label><textarea rows="3" placeholder="お店の紹介文を入力してください">新鮮なネタを毎日直送。お手頃価格で本格寿司をお楽しみいただけます。</textarea></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button><button class="btn btn-secondary">↩ リセット</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - 営業時間 -->
+<!-- ============================== -->
+<div class="page" id="page-store-hours">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ 営業時間</div>
+  <div class="page-title">営業時間設定</div>
+  <div class="page-subtitle">通常営業時間と定休日を設定します</div>
+
+  <div class="card">
+    <div class="card-title">🕐 通常営業時間</div>
+    <table class="data-table">
+      <thead><tr><th>曜日</th><th>営業</th><th>開店</th><th>閉店</th></tr></thead>
+      <tbody>
+        ${['月','火','水','木','金','土','日'].map(d=>`<tr>
+          <td style="font-weight:600">${d}曜日</td>
+          <td><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></td>
+          <td><input type="time" value="11:00" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px"></td>
+          <td><input type="time" value="22:00" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px"></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚚 デリバリー営業時間</div>
+    <table class="data-table">
+      <thead><tr><th>曜日</th><th>営業</th><th>開始</th><th>終了</th></tr></thead>
+      <tbody>
+        ${['月','火','水','木','金','土','日'].map(d=>`<tr>
+          <td style="font-weight:600">${d}曜日</td>
+          <td><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></td>
+          <td><input type="time" value="11:30" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px"></td>
+          <td><input type="time" value="21:00" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px"></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 定休日</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${['月','火','水','木','金','土','日','祝'].map(d=>`<label style="display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="checkbox">${d}</label>`).join('')}
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - 施設設備 -->
+<!-- ============================== -->
+<div class="page" id="page-store-facility">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ 施設設備</div>
+  <div class="page-title">施設設備</div>
+  <div class="page-subtitle">座席情報と設備を設定します</div>
+
+  <div class="card">
+    <div class="card-title">🪑 座席情報</div>
+    <div class="form-grid">
+      <div class="form-group"><label>座席数</label><input type="number" value="80"></div>
+      <div class="form-group"><label>個室</label><select><option>なし</option><option>あり</option><option>半個室あり</option></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏗 設備</div>
+    ${[
+      ['駐車場','parking',true],['身障者用駐車場','handicap',false],['エレベーター','elevator',true],
+      ['多目的トイレ','toilet',false],['おむつ替えシート','diaper',false],['子連れ可','kids',true],
+      ['ペット可','pets',false],['車椅子対応','wheelchair',false]
+    ].map(([l,k,v])=>`<div class="toggle-row"><span class="label">${l}</span><label class="toggle"><input type="checkbox" ${v?'checked':''}><span class="slider"></span></label></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚬 喫煙設定</div>
+    <div class="form-group"><select><option>完全禁煙</option><option>分煙</option><option>喫煙可</option></select></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💳 決済対応</div>
+    ${[['クレジットカード',true],['QRコード決済',true],['現金決済',true]].map(([l,v])=>`<div class="toggle-row"><span class="label">${l}</span><label class="toggle"><input type="checkbox" ${v?'checked':''}><span class="slider"></span></label></div>`).join('')}
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-group"><label>サービス料率（%）</label><input type="number" value="10" min="0" max="100"></div>
+      <div class="form-group"><label>席料（円）</label><input type="number" value="0" min="0"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👔 その他</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>ドレスコード</label><input type="text" placeholder="例：スマートカジュアル"></div>
+      <div class="form-group full"><label>衛生対策</label><textarea rows="2" placeholder="例：消毒液設置、従業員マスク着用">消毒液設置、定期換気、従業員マスク着用</textarea></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - 配達設定 -->
+<!-- ============================== -->
+<div class="page" id="page-store-delivery">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ 配達設定</div>
+  <div class="page-title">配達設定</div>
+  <div class="page-subtitle">デリバリーに関する設定を管理します</div>
+
+  <div class="card">
+    <div class="card-title">🚚 配達エリア・料金</div>
+    <div class="form-grid">
+      <div class="form-group"><label>配達圏（半径km）<span class="req">*</span></label><input type="number" value="3.0" step="0.1" min="0"></div>
+      <div class="form-group"><label>配達料金（円）</label><input type="number" value="300" min="0" step="50"><div style="font-size:10px;color:var(--text-light);margin-top:2px">※未入力の場合ブランドデフォルト値を使用</div></div>
+      <div class="form-group"><label>最低注文金額（円）</label><input type="number" value="1000" min="0" step="100"></div>
+      <div class="form-group"><label>少量注文追加料金（円）</label><input type="number" value="200" min="0" step="50"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⏱ 時間見積</div>
+    <div class="form-grid">
+      <div class="form-group"><label>調理見積時間（分）</label><input type="number" value="20" min="0"></div>
+      <div class="form-group"><label>配送見積時間 最短（分）</label><input type="number" value="15" min="0"></div>
+      <div class="form-group"><label>配送見積時間 最長（分）</label><input type="number" value="40" min="0"></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - キャンセルポリシー -->
+<!-- ============================== -->
+<div class="page" id="page-store-cancel">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ キャンセルポリシー</div>
+  <div class="page-title">キャンセルポリシー</div>
+  <div class="page-subtitle">予約のキャンセル・変更時のキャンセル料を設定します</div>
+
+  <div class="card">
+    <div class="card-title">❌ 予約取消</div>
+    <div class="form-grid">
+      <div class="form-group"><label>当日キャンセル料（%）</label>
+        <select>${Array.from({length:11},(_,i)=>`<option ${i===10?'selected':''}>${i*10}%</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>3日前キャンセル料（%）</label>
+        <select>${Array.from({length:11},(_,i)=>`<option ${i===5?'selected':''}>${i*10}%</option>`).join('')}</select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✏️ 予約変更</div>
+    <div class="form-grid">
+      <div class="form-group"><label>当日変更料（%）</label>
+        <select>${Array.from({length:11},(_,i)=>`<option ${i===5?'selected':''}>${i*10}%</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>3日前変更料（%）</label>
+        <select>${Array.from({length:11},(_,i)=>`<option ${i===2?'selected':''}>${i*10}%</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - メディア -->
+<!-- ============================== -->
+<div class="page" id="page-store-media">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ メディア</div>
+  <div class="page-title">メディア管理</div>
+  <div class="page-subtitle">店舗の画像・動画を管理します</div>
+
+  ${[
+    ['📸 ヘッダーギャラリー','最大10枚の画像/動画をアップロード'],
+    ['🖼 店舗サムネイル','店舗一覧で表示されるサムネイル画像'],
+    ['👨‍🍳 スタッフ紹介','スタッフの写真とプロフィール'],
+    ['📷 写真ギャラリー','店内・料理の写真（複数アップロード可）'],
+    ['🍽 注文ページヒーロー画像','モバイルオーダーページのメイン画像'],
+  ].map(([t,d])=>`<div class="card">
+    <div class="card-title">${t}</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">${d}</p>
+    <div class="upload-area"><div class="icon">📤</div><div>ここにファイルをドラッグ＆ドロップ<br>またはクリックして選択</div></div>
+  </div>`).join('')}
+</div>
+
+<!-- ============================== -->
+<!-- 🏪 店舗管理 - 機能設定 -->
+<!-- ============================== -->
+<div class="page" id="page-store-feature">
+  <div class="breadcrumb"><a href="#" onclick="return false">店舗管理</a> ＞ 機能設定</div>
+  <div class="page-title">機能設定</div>
+  <div class="page-subtitle">店舗の各機能のON/OFFを切り替えます</div>
+
+  <div class="card">
+    <div class="card-title">⚙️ 受付チャネル</div>
+    ${[['席のみ予約',true],['テイクアウト受付',true],['デリバリー受付',true]].map(([l,v])=>`<div class="toggle-row"><span class="label">${l}</span><label class="toggle"><input type="checkbox" ${v?'checked':''}><span class="slider"></span></label></div>`).join('')}
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 📋 メニュー管理 -->
+<!-- ============================== -->
+<div class="page" id="page-menu">
+  <div class="page-title">メニュー管理</div>
+  <div class="page-subtitle">商品の登録・編集・カテゴリ管理を行います</div>
+
+  <div class="search-bar">
+    <input type="text" placeholder="🔍 商品名・カテゴリで検索">
+    <select style="width:160px;padding:8px;border:1px solid var(--border);border-radius:6px"><option>全カテゴリ</option><option>おすすめ</option><option>握り</option><option>軍艦</option><option>サイドメニュー</option><option>ドリンク</option><option>デザート</option></select>
+    <button class="btn btn-primary" onclick="document.getElementById('menuModal').classList.add('show')">＋ 商品追加</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th style="width:60px">画像</th><th>商品名</th><th>カテゴリ</th><th>価格</th><th>タグ</th><th>店内</th><th>持帰</th><th>配達</th><th>状態</th><th>操作</th></tr></thead>
+      <tbody>
+        ${[
+          ['まぐろ','握り','¥120','おすすめ',true,true,true,'販売中'],
+          ['サーモン','握り','¥120','一番人気',true,true,true,'販売中'],
+          ['えびアボカド','軍艦','¥150','NEW',true,true,true,'販売中'],
+          ['茶碗蒸し','サイドメニュー','¥280','',true,true,false,'販売中'],
+          ['特選にぎり10貫セット','おすすめ','¥980','期間限定',true,true,true,'販売中'],
+          ['抹茶パフェ','デザート','¥350','季節限定',true,true,false,'品切れ'],
+        ].map(([name,cat,price,tag,inn,take,del,status])=>`<tr>
+          <td><div style="width:48px;height:48px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center">🍣</div></td>
+          <td style="font-weight:600">${name}</td>
+          <td>${cat}</td>
+          <td>${price}</td>
+          <td>${tag ? `<span class="tag selected">${tag}</span>`:''}</td>
+          <td><label class="toggle"><input type="checkbox" ${inn?'checked':''}><span class="slider"></span></label></td>
+          <td><label class="toggle"><input type="checkbox" ${take?'checked':''}><span class="slider"></span></label></td>
+          <td><label class="toggle"><input type="checkbox" ${del?'checked':''}><span class="slider"></span></label></td>
+          <td><span class="badge ${status==='販売中'?'badge-success':'badge-danger'}">${status}</span></td>
+          <td><button class="btn btn-secondary btn-sm">編集</button> <button class="btn btn-sm" style="background:#ffebee;color:var(--danger)">削除</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏪 提供店舗の一括選択</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked> 全店舗に適用</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked> 渋谷店</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked> 新宿店</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" checked> 池袋店</label>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 📊 売上・分析 - 売上レポート -->
+<!-- ============================== -->
+<div class="page" id="page-sales-report">
+  <div class="breadcrumb"><a href="#" onclick="return false">売上・分析</a> ＞ 売上レポート</div>
+  <div class="page-title">売上レポート</div>
+  <div class="page-subtitle">期間別の売上データを確認します</div>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    ${['今日','昨日','今週','今月','カスタム'].map((l,i)=>`<button class="btn ${i===2?'btn-primary':'btn-secondary'}">${l}</button>`).join('')}
+    <select style="margin-left:auto;padding:6px 10px;border:1px solid var(--border);border-radius:6px"><option>受渡済のみ</option><option>全ステータス</option><option>キャンセルのみ</option></select>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">売上合計</div><div class="stat-value">¥1,284,500</div><div class="stat-change up">▲ 12.3% 前週比</div></div>
+    <div class="stat-card"><div class="stat-label">注文件数</div><div class="stat-value">342</div><div class="stat-change up">▲ 8.1%</div></div>
+    <div class="stat-card"><div class="stat-label">平均注文額</div><div class="stat-value">¥3,756</div><div class="stat-change up">▲ 3.8%</div></div>
+    <div class="stat-card"><div class="stat-label">キャンセル率</div><div class="stat-value">2.3%</div><div class="stat-change down">▼ 0.5pt</div></div>
+  </div>
+
+  <div class="sub-tabs">
+    <div class="sub-tab active" onclick="switchSubTab(this,'sales')">日次推移</div>
+    <div class="sub-tab" onclick="switchSubTab(this,'sales')">チャネル別</div>
+    <div class="sub-tab" onclick="switchSubTab(this,'sales')">商品ランキング</div>
+    <div class="sub-tab" onclick="switchSubTab(this,'sales')">時間帯分析</div>
+  </div>
+  <div class="chart-placeholder">📊 チャートエリア（Supabaseデータ連携後に描画）</div>
+  <div class="btn-group"><button class="btn btn-secondary">📥 CSVエクスポート</button></div>
+</div>
+
+<!-- 📊 売上・分析 - AI売上分析 -->
+<div class="page" id="page-sales-ai">
+  <div class="breadcrumb"><a href="#" onclick="return false">売上・分析</a> ＞ AI売上分析</div>
+  <div class="page-title">AI売上分析</div>
+  <div class="page-subtitle">AIが売上データを分析し、改善提案を行います</div>
+
+  <div class="stats-row">
+    <div class="stat-card" style="border-left:4px solid var(--info)"><div class="stat-label">🔮 来週の売上予測</div><div class="stat-value">¥1,450,000</div><div class="stat-change" style="color:var(--info)">信頼度 82%</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--success)"><div class="stat-label">📦 仕入れ推奨</div><div class="stat-value">3件</div><div class="stat-change">要確認の食材あり</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--warning)"><div class="stat-label">💡 改善提案</div><div class="stat-value">5件</div><div class="stat-change">未対応の提案</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--accent)"><div class="stat-label">⏰ 時間帯施策</div><div class="stat-value">2件</div><div class="stat-change">新しい提案</div></div>
+  </div>
+
+  ${[
+    ['🔮 売上予測','来週月曜〜日曜の日別売上を予測。天気・曜日・過去データから算出。','月: ¥180K / 火: ¥165K / 水: ¥170K / 木: ¥195K / 金: ¥250K / 土: ¥310K / 日: ¥280K'],
+    ['📦 仕入れ推奨','売上予測とメニュー出数傾向から食材別の発注目安を算出。','サーモン: 週15kg → 18kg推奨（+20%） / まぐろ: 週12kg → 維持 / アボカド: 週8kg → 10kg推奨'],
+    ['💡 メニュー改善提案','注文数・利益率の変動から自動提案。','「茶碗蒸し」は注文数が先月比-25%。¥280→¥250への値下げ、またはセットメニューへの組み込みを検討してください。'],
+    ['⏰ 時間帯別施策','閑散時間帯の客単価向上策を提案。','14:00-16:00の客単価が¥1,200と低水準。この時間帯限定のドリンクセット（+¥200）を追加すると月間+¥45,000が見込めます。'],
+  ].map(([t,d,c])=>`<div class="card">
+    <div class="card-title">${t}</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">${d}</p>
+    <div style="background:#f8f9fa;padding:14px;border-radius:8px;font-size:12px;line-height:1.8">${c}</div>
+  </div>`).join('')}
+</div>
+
+<!-- 📊 売上・分析 - AI市場分析 -->
+<div class="page" id="page-sales-market">
+  <div class="breadcrumb"><a href="#" onclick="return false">売上・分析</a> ＞ AI市場分析</div>
+  <div class="page-title">AI市場分析</div>
+  <div class="page-subtitle">エリア内の競合動向とレビュー分析を確認します</div>
+
+  <div class="card">
+    <div class="card-title">🏪 エリア競合分析</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">半径1km以内の同ジャンル店舗との比較</p>
+    <table class="data-table">
+      <thead><tr><th>店舗名</th><th>ジャンル</th><th>Google評価</th><th>価格帯</th><th>距離</th></tr></thead>
+      <tbody>
+        <tr style="background:#fff8e1"><td style="font-weight:600">⭐ スシロー 渋谷店（自店）</td><td>回転寿司</td><td>⭐ 4.1</td><td>¥1,000〜2,000</td><td>—</td></tr>
+        <tr><td>くら寿司 渋谷駅前店</td><td>回転寿司</td><td>⭐ 3.8</td><td>¥1,000〜2,000</td><td>350m</td></tr>
+        <tr><td>はま寿司 渋谷店</td><td>回転寿司</td><td>⭐ 3.6</td><td>¥1,000〜2,000</td><td>520m</td></tr>
+        <tr><td>鮨 一条</td><td>握り寿司</td><td>⭐ 4.5</td><td>¥10,000〜</td><td>780m</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📝 レビュー要約・傾向分析</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#e8f5e9;padding:14px;border-radius:8px">
+        <div style="font-weight:700;margin-bottom:8px;color:#2e7d32">👍 ポジティブ傾向</div>
+        <ul style="font-size:12px;line-height:1.8;padding-left:16px"><li>ネタの鮮度が高い（42件）</li><li>コスパが良い（38件）</li><li>アプリの使いやすさ（21件）</li></ul>
+      </div>
+      <div style="background:#ffebee;padding:14px;border-radius:8px">
+        <div style="font-weight:700;margin-bottom:8px;color:#c62828">👎 ネガティブ傾向</div>
+        <ul style="font-size:12px;line-height:1.8;padding-left:16px"><li>待ち時間が長い（25件）</li><li>座席が狭い（12件）</li><li>サイドメニューの種類（8件）</li></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 🎨 ブランドHP - デザイン設定 -->
+<!-- ============================== -->
+<div class="page" id="page-brand-design">
+  <div class="breadcrumb"><a href="#" onclick="return false">ブランドHP</a> ＞ デザイン設定</div>
+  <div class="page-title">デザイン設定</div>
+  <div class="page-subtitle">ブランドサイトの配色・フォント・ロゴを設定します</div>
+
+  <div class="card">
+    <div class="card-title">🎨 カラー設定</div>
+    <div class="form-grid">
+      <div class="form-group"><label>メインカラー</label><div class="color-input-group"><input type="color" value="#e94560"><input type="text" value="#e94560"></div></div>
+      <div class="form-group"><label>サブカラー</label><div class="color-input-group"><input type="color" value="#1a1a2e"><input type="text" value="#1a1a2e"></div></div>
+      <div class="form-group"><label>ヘッダー背景色</label><div class="color-input-group"><input type="color" value="#ffffff"><input type="text" value="#ffffff"></div></div>
+      <div class="form-group"><label>ヘッダーテキスト色</label><div class="color-input-group"><input type="color" value="#333333"><input type="text" value="#333333"></div></div>
+      <div class="form-group"><label>フォントカラー</label><div class="color-input-group"><input type="color" value="#2d3436"><input type="text" value="#2d3436"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔤 フォント設定</div>
+    <div class="form-group"><label>フォント選択</label><select><option>Noto Sans JP</option><option>Noto Serif JP</option><option>M PLUS Rounded 1c</option><option>Zen Kaku Gothic New</option></select></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏷 タグカラー設定</div>
+    <div class="form-grid cols-3">
+      ${['おすすめ:#e94560','期間限定:#ff9800','季節限定:#4caf50','数量限定:#9c27b0','NEW:#2196f3','割引中:#f44336','一番人気:#ff5722'].map(t=>{
+        const [l,c]=t.split(':');
+        return `<div class="form-group"><label>${l}</label><div class="color-input-group"><input type="color" value="${c}"><input type="text" value="${c}"></div></div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🖼 ロゴ・画像</div>
+    <div class="form-grid">
+      <div class="form-group"><label>ブランドロゴ</label><div class="upload-area" style="padding:16px"><div class="icon">📤</div><div>画像をアップロード</div></div></div>
+      <div class="form-group"><label>ヘッダー背景画像</label><div class="upload-area" style="padding:16px"><div class="icon">📤</div><div>画像をアップロード</div></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 SNSリンク</div>
+    <div class="form-grid">
+      ${['LINE','X (Twitter)','Instagram','Facebook','TikTok','YouTube','Threads','食べログ'].map(s=>`<div class="form-group"><label>${s} URL</label><input type="url" placeholder="https://"></div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🌐 公開設定</div>
+    <div class="form-grid">
+      <div class="form-group"><label>公開ステータス</label><select><option>公開</option><option>非公開</option><option>メンテナンス中</option></select></div>
+      <div class="form-group"><label>HP URL</label><input type="text" value="https://aiden-jp.net/sushiro/" disabled style="background:#f5f5f5"></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button><button class="btn btn-secondary">👁 プレビュー</button></div>
+  </div>
+</div>
+
+<!-- 🎨 ブランドHP - トップページCMS -->
+<div class="page" id="page-brand-top">
+  <div class="breadcrumb"><a href="#" onclick="return false">ブランドHP</a> ＞ トップページCMS</div>
+  <div class="page-title">トップページCMS</div>
+  <div class="page-subtitle">ブランドサイトのトップページコンテンツを編集します</div>
+
+  ${[
+    ['🎬 ヒーロー','メインビジュアルの画像/動画とキャッチコピー'],
+    ['📺 キャンペーン動画','キャンペーン枠の動画'],
+    ['⭐ おすすめトピックス','各トピックに画像・タイトル・本文を設定'],
+    ['🔍 店舗を探す背景画像','店舗検索セクションの背景'],
+    ['📢 ご案内（4枠）','各枠に画像・タイトル・サブタイトル・本文を設定'],
+  ].map(([t,d])=>`<div class="card">
+    <div class="card-title">${t}</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">${d}</p>
+    <div class="upload-area" style="padding:16px"><div class="icon">📤</div><div>メディアをアップロード</div></div>
+    <div class="form-group" style="margin-top:12px"><label>テキスト</label><textarea rows="2" placeholder="タイトルやキャッチコピーを入力"></textarea></div>
+  </div>`).join('')}
+  <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+</div>
+
+<!-- 🎨 ブランドHP - ニュース管理 -->
+<div class="page" id="page-brand-news">
+  <div class="breadcrumb"><a href="#" onclick="return false">ブランドHP</a> ＞ ニュース管理</div>
+  <div class="page-title">ニュース管理</div>
+  <div class="page-subtitle">お知らせ記事の作成・編集・削除を行います</div>
+
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary">＋ 新規作成</button></div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>日付</th><th>カテゴリ</th><th>タイトル</th><th>ステータス</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>2026/02/28</td><td><span class="badge badge-info">キャンペーン</span></td><td>春の大感謝祭 開催中！</td><td><span class="badge badge-success">公開</span></td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td>2026/02/20</td><td><span class="badge badge-warning">お知らせ</span></td><td>営業時間変更のご案内</td><td><span class="badge badge-success">公開</span></td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td>2026/02/15</td><td><span class="badge badge-info">新メニュー</span></td><td>季節限定「桜えびの天ぷら」登場</td><td><span class="badge badge-success">公開</span></td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 🎨 ブランドHP - クーポン管理 -->
+<div class="page" id="page-brand-coupon">
+  <div class="breadcrumb"><a href="#" onclick="return false">ブランドHP</a> ＞ クーポン管理</div>
+  <div class="page-title">クーポン管理</div>
+  <div class="page-subtitle">クーポンの作成・編集・配布管理を行います</div>
+
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary">＋ クーポン作成</button></div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>コード</th><th>クーポン名</th><th>割引</th><th>有効期限</th><th>対象店舗</th><th>利用数</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:monospace;font-weight:700">SPRING2026</td><td>春のお得クーポン</td><td>10%OFF</td><td>2026/03/31</td><td>全店舗</td><td>145</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td style="font-family:monospace;font-weight:700">WELCOME500</td><td>初回限定500円引き</td><td>¥500引き</td><td>2026/06/30</td><td>全店舗</td><td>89</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 👥 会員・CRM - 会員一覧 -->
+<!-- ============================== -->
+<div class="page" id="page-member-list">
+  <div class="breadcrumb"><a href="#" onclick="return false">会員・CRM</a> ＞ 会員一覧</div>
+  <div class="page-title">会員一覧</div>
+  <div class="page-subtitle">法人配下の会員情報を管理します</div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">総会員数</div><div class="stat-value">2,847</div></div>
+    <div class="stat-card"><div class="stat-label">今月新規</div><div class="stat-value">134</div><div class="stat-change up">▲ 18%</div></div>
+    <div class="stat-card"><div class="stat-label">アクティブ率</div><div class="stat-value">67.2%</div></div>
+    <div class="stat-card"><div class="stat-label">平均ポイント残高</div><div class="stat-value">342pt</div></div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" placeholder="🔍 氏名・電話番号・メールで検索">
+    <select style="width:140px;padding:8px;border:1px solid var(--border);border-radius:6px"><option>全ランク</option><option>プラチナ</option><option>ゴールド</option><option>シルバー</option><option>レギュラー</option></select>
+    <button class="btn btn-secondary">📥 CSVエクスポート</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>会員ID</th><th>氏名</th><th>電話番号</th><th>ランク</th><th>ポイント</th><th>来店回数</th><th>最終来店</th><th>操作</th></tr></thead>
+      <tbody>
+        ${[
+          ['M001','佐藤花子','090-1234-5678','ゴールド','1,240','28','2026/02/27'],
+          ['M002','鈴木一郎','090-2345-6789','シルバー','560','12','2026/02/25'],
+          ['M003','田中美咲','080-3456-7890','プラチナ','3,100','52','2026/03/01'],
+          ['M004','山田健太','070-4567-8901','レギュラー','80','3','2026/02/10'],
+          ['M005','伊藤さくら','090-5678-9012','ゴールド','890','22','2026/02/28'],
+        ].map(([id,name,tel,rank,pt,cnt,last])=>`<tr>
+          <td style="font-family:monospace">${id}</td>
+          <td style="font-weight:600">${name}</td>
+          <td>${tel}</td>
+          <td><span class="badge ${rank==='プラチナ'?'badge-info':rank==='ゴールド'?'badge-warning':rank==='シルバー'?'badge-success':'badge-info'}">${rank}</span></td>
+          <td>${pt}pt</td>
+          <td>${cnt}回</td>
+          <td>${last}</td>
+          <td><button class="btn btn-secondary btn-sm">詳細</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 👥 会員・CRM - ポイント設定 -->
+<div class="page" id="page-member-point">
+  <div class="breadcrumb"><a href="#" onclick="return false">会員・CRM</a> ＞ ポイント設定</div>
+  <div class="page-title">ポイント設定</div>
+  <div class="page-subtitle">ポイント制度の有効化と付与率を設定します（法人単位）</div>
+
+  <div class="card">
+    <div class="card-title">🎯 ポイント制度</div>
+    <div class="toggle-row" style="border:none;padding-bottom:16px"><span class="label" style="font-weight:700;font-size:14px">ポイント制度を有効にする</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="form-grid">
+      <div class="form-group"><label>ポイント付与率</label><div style="display:flex;gap:8px;align-items:center"><input type="number" value="100" style="width:80px"> 円につき <input type="number" value="1" style="width:60px"> ポイント</div></div>
+      <div class="form-group"><label>ポイント利用レート</label><div style="display:flex;gap:8px;align-items:center"><input type="number" value="1" style="width:60px"> ポイント ＝ <input type="number" value="1" style="width:60px"> 円</div></div>
+      <div class="form-group"><label>ポイント有効期限（月）</label><input type="number" value="12" min="1"></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- 👥 会員・CRM - ランク設定 -->
+<div class="page" id="page-member-rank">
+  <div class="breadcrumb"><a href="#" onclick="return false">会員・CRM</a> ＞ ランク設定</div>
+  <div class="page-title">ランク設定</div>
+  <div class="page-subtitle">会員ランクの条件と特典を設定します（法人単位）</div>
+
+  <div class="card">
+    <div class="toggle-row" style="border:none;padding-bottom:16px"><span class="label" style="font-weight:700;font-size:14px">会員ランク制度を有効にする</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">＋ ランク追加</button></div>
+    <table class="data-table">
+      <thead><tr><th>ランク名</th><th>条件</th><th>特典</th><th>対象人数</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:700">💎 プラチナ</td><td>月5回以上 & 累計¥100,000以上</td><td>ポイント3倍、毎月デザート1品無料</td><td>48名</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td style="font-weight:700">🥇 ゴールド</td><td>月3回以上 & 累計¥50,000以上</td><td>ポイント2倍、誕生日クーポン</td><td>312名</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td style="font-weight:700">🥈 シルバー</td><td>月1回以上</td><td>ポイント1.5倍</td><td>891名</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+        <tr><td>レギュラー</td><td>—（デフォルト）</td><td>通常ポイント</td><td>1,596名</td><td><button class="btn btn-secondary btn-sm">編集</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 👥 会員・CRM - CRM配信 -->
+<div class="page" id="page-member-crm">
+  <div class="breadcrumb"><a href="#" onclick="return false">会員・CRM</a> ＞ CRM配信</div>
+  <div class="page-title">CRM配信</div>
+  <div class="page-subtitle">会員へのメール・SMS配信を管理します</div>
+  <div class="placeholder-section"><div class="icon">📧</div><p>CRM配信機能は将来実装予定です</p></div>
+</div>
+
+<!-- ============================== -->
+<!-- 🤖 AI・SNS - SNS管理 -->
+<!-- ============================== -->
+<div class="page" id="page-ai-sns">
+  <div class="breadcrumb"><a href="#" onclick="return false">AI・SNS</a> ＞ SNS管理</div>
+  <div class="page-title">SNS管理</div>
+  <div class="page-subtitle">AIを活用したSNSアカウント作成・投稿管理</div>
+
+  <div class="card">
+    <div class="card-title">📱 SNSアカウント状況</div>
+    <table class="data-table">
+      <thead><tr><th>SNS</th><th>アカウント</th><th>ステータス</th><th>フォロワー</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>Instagram</td><td>@sushiro_official</td><td><span class="badge badge-success">連携済</span></td><td>12,400</td><td><button class="btn btn-secondary btn-sm">設定</button></td></tr>
+        <tr><td>X (Twitter)</td><td>—</td><td><span class="badge badge-danger">未連携</span></td><td>—</td><td><button class="btn btn-primary btn-sm">🤖 AI作成代行</button></td></tr>
+        <tr><td>Facebook</td><td>スシロー公式</td><td><span class="badge badge-success">連携済</span></td><td>5,800</td><td><button class="btn btn-secondary btn-sm">設定</button></td></tr>
+        <tr><td>LINE</td><td>@sushiro</td><td><span class="badge badge-success">連携済</span></td><td>28,300</td><td><button class="btn btn-secondary btn-sm">設定</button></td></tr>
+        <tr><td>TikTok</td><td>—</td><td><span class="badge badge-danger">未連携</span></td><td>—</td><td><button class="btn btn-primary btn-sm">🤖 AI作成代行</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✍️ 投稿コンテンツ作成</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>テーマ・イメージ<span class="req">*</span></label><textarea rows="3" placeholder="例：春の新メニュー「桜えびの天ぷら」の紹介。華やかで食欲をそそる雰囲気で。"></textarea></div>
+      <div class="form-group"><label>投稿先</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          ${['Instagram','X','Facebook','LINE','TikTok'].map(s=>`<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="checkbox">${s}</label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group"><label>投稿日時</label><input type="datetime-local"></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary">🤖 AIで生成</button>
+      <button class="btn btn-secondary">👁 プレビュー</button>
+      <button class="btn btn-secondary">📅 スケジュール投稿</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 投稿履歴</div>
+    <table class="data-table">
+      <thead><tr><th>日時</th><th>媒体</th><th>内容（抜粋）</th><th>ステータス</th></tr></thead>
+      <tbody>
+        <tr><td>2026/02/28 18:00</td><td>Instagram, X</td><td>🍣 本日のおすすめ！サーモン三昧フェア...</td><td><span class="badge badge-success">投稿済</span></td></tr>
+        <tr><td>2026/03/01 12:00</td><td>Instagram</td><td>🌸 春の大感謝祭スタート！...</td><td><span class="badge badge-warning">予約中</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 🤖 AI・SNS - 告知コンテンツ生成 -->
+<div class="page" id="page-ai-content">
+  <div class="breadcrumb"><a href="#" onclick="return false">AI・SNS</a> ＞ 告知コンテンツ生成</div>
+  <div class="page-title">告知コンテンツ生成</div>
+  <div class="page-subtitle">AIでお知らせ記事・バナーを自動生成し、HP/SNSに一括配信</div>
+
+  <div class="card">
+    <div class="card-title">✨ コンテンツ生成</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>テーマ・イメージ<span class="req">*</span></label><textarea rows="3" placeholder="例：3月限定の桜メニュー3品の告知。春らしい華やかなデザインで。"></textarea></div>
+      <div class="form-group"><label>生成タイプ</label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          ${['お知らせ記事','キャンペーンバナー','両方'].map((l,i)=>`<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="radio" name="contentType" ${i===0?'checked':''}>${l}</label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group"><label>配信先</label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          ${['ブランドHP','Instagram','X','Facebook','LINE'].map(s=>`<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer"><input type="checkbox" checked>${s}</label>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary">🤖 AIで生成</button>
+      <button class="btn btn-secondary">👁 プレビュー</button>
+      <button class="btn btn-secondary">🚀 一括配信</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🤖 AI・SNS - AI CRM分析 -->
+<div class="page" id="page-ai-crm">
+  <div class="breadcrumb"><a href="#" onclick="return false">AI・SNS</a> ＞ AI CRM分析</div>
+  <div class="page-title">AI CRM分析</div>
+  <div class="page-subtitle">AIが会員データを分析し、施策を提案します</div>
+
+  <div class="stats-row">
+    <div class="stat-card" style="border-left:4px solid var(--danger)"><div class="stat-label">⚠️ 離脱リスク高</div><div class="stat-value">23名</div><div class="stat-change">過去30日来店なし</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--info)"><div class="stat-label">📊 自動セグメント</div><div class="stat-value">5件</div><div class="stat-change">AI生成済</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--success)"><div class="stat-label">🔄 リピート率</div><div class="stat-value">28.3%</div><div class="stat-change down">業界平均35%を下回る</div></div>
+    <div class="stat-card" style="border-left:4px solid var(--warning)"><div class="stat-label">📧 最適配信</div><div class="stat-value">金曜 18時</div><div class="stat-change">開封率最高の時間帯</div></div>
+  </div>
+
+  ${[
+    ['⚠️ 離脱予測・再来店促進','過去30日来店なしの会員23名にクーポン送付を推奨。過去の傾向から、¥300OFFクーポンで約40%の再来店が見込めます。','実行：対象者にクーポン自動配信'],
+    ['📊 自動セグメント','AI が会員を自動分類しました：VIP層（月3回以上・客単価¥3,000+）= 48名 / 新規ファン（初回来店から30日以内）= 67名 / 離脱リスク = 23名','各セグメント向け施策を提案中'],
+    ['📧 最適配信タイミング','金曜18:00のメール開封率が32%で最高。次点は土曜11:00（28%）。日曜午後は最も低く12%。','推奨：次回配信を金曜18時に設定'],
+  ].map(([t,d,a])=>`<div class="card">
+    <div class="card-title">${t}</div>
+    <div style="background:#f8f9fa;padding:14px;border-radius:8px;font-size:12px;line-height:1.8;margin-bottom:12px">${d}</div>
+    <div style="font-size:12px;color:var(--accent);font-weight:600">→ ${a}</div>
+  </div>`).join('')}
+</div>
+
+<!-- ============================== -->
+<!-- 💎 サブスク - プラン設計 -->
+<!-- ============================== -->
+<div class="page" id="page-sub-plan">
+  <div class="breadcrumb"><a href="#" onclick="return false">サブスク</a> ＞ プラン設計</div>
+  <div class="page-title">サブスクプラン設計</div>
+  <div class="page-subtitle">法人独自のサブスクリプションプランを設計します</div>
+
+  <div class="card">
+    <div class="toggle-row" style="border:none;padding-bottom:16px"><span class="label" style="font-weight:700;font-size:14px">サブスクリプション機能を有効にする</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary">＋ プラン追加</button></div>
+
+  ${[
+    {name:'プレミアム会員',price:'月額 ¥980',features:['ポイント付与 +50%','毎月お好きな握り3貫プレゼント','デリバリー送料無料','来店時ドリンク1杯無料']},
+    {name:'スタンダード会員',price:'月額 ¥480',features:['ポイント付与 +20%','デリバリー送料 ¥150引き','誕生日月 ¥500クーポン']},
+  ].map(p=>`<div class="card">
+    <div class="card-title" style="justify-content:space-between">${p.name}<div><button class="btn btn-secondary btn-sm">編集</button> <button class="btn btn-sm" style="background:#ffebee;color:var(--danger)">削除</button></div></div>
+    <div style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:12px">${p.price}</div>
+    <div style="font-size:12px;line-height:2">${p.features.map(f=>`<div>✅ ${f}</div>`).join('')}</div>
+  </div>`).join('')}
+</div>
+
+<!-- 💎 サブスク - 加入者一覧 -->
+<div class="page" id="page-sub-members">
+  <div class="breadcrumb"><a href="#" onclick="return false">サブスク</a> ＞ 加入者一覧</div>
+  <div class="page-title">サブスク加入者一覧</div>
+  <div class="page-subtitle">現在のサブスク会員を管理します</div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">総加入者数</div><div class="stat-value">287</div></div>
+    <div class="stat-card"><div class="stat-label">今月新規</div><div class="stat-value">34</div></div>
+    <div class="stat-card"><div class="stat-label">今月解約</div><div class="stat-value">8</div></div>
+    <div class="stat-card"><div class="stat-label">MRR</div><div class="stat-value">¥198,460</div></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>会員</th><th>プラン</th><th>加入日</th><th>ステータス</th><th>累計支払</th></tr></thead>
+      <tbody>
+        <tr><td>佐藤花子</td><td>プレミアム</td><td>2025/10/15</td><td><span class="badge badge-success">アクティブ</span></td><td>¥4,900</td></tr>
+        <tr><td>鈴木一郎</td><td>スタンダード</td><td>2025/12/01</td><td><span class="badge badge-success">アクティブ</span></td><td>¥1,440</td></tr>
+        <tr><td>高橋次郎</td><td>プレミアム</td><td>2025/08/20</td><td><span class="badge badge-danger">解約済</span></td><td>¥5,880</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 💎 サブスク - 売上レポート -->
+<div class="page" id="page-sub-report">
+  <div class="breadcrumb"><a href="#" onclick="return false">サブスク</a> ＞ 売上レポート</div>
+  <div class="page-title">サブスク売上レポート</div>
+  <div class="page-subtitle">MRR・解約率の推移を確認します</div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">MRR（月間経常収益）</div><div class="stat-value">¥198,460</div><div class="stat-change up">▲ 12.5%</div></div>
+    <div class="stat-card"><div class="stat-label">解約率</div><div class="stat-value">2.8%</div><div class="stat-change up">▼ 0.3pt</div></div>
+    <div class="stat-card"><div class="stat-label">LTV（平均）</div><div class="stat-value">¥8,420</div></div>
+    <div class="stat-card"><div class="stat-label">プラン別比率</div><div class="stat-value">P:65% / S:35%</div></div>
+  </div>
+  <div class="chart-placeholder">📊 MRR推移チャート（Supabaseデータ連携後に描画）</div>
+</div>
+
+<!-- ============================== -->
+<!-- ⭐ 口コミ - ポイント設定 -->
+<!-- ============================== -->
+<div class="page" id="page-review-setting">
+  <div class="breadcrumb"><a href="#" onclick="return false">口コミ</a> ＞ ポイント設定</div>
+  <div class="page-title">口コミポイント設定</div>
+  <div class="page-subtitle">口コミ投稿に対するポイント付与を設定します（ブランド単位）</div>
+
+  <div class="card">
+    <div class="toggle-row" style="border:none;padding-bottom:16px"><span class="label" style="font-weight:700;font-size:14px">口コミポイント機能を有効にする</span><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="form-grid">
+      <div class="form-group"><label>口コミ投稿時の付与ポイント</label><div style="display:flex;gap:8px;align-items:center"><input type="number" value="50" style="width:80px"> ポイント / 1件</div></div>
+      <div class="form-group"><label>月あたり付与上限（1人）</label><div style="display:flex;gap:8px;align-items:center"><input type="number" value="3" style="width:60px"> 回 / 月</div></div>
+      <div class="form-group"><label>承認方式</label><select><option>自動承認</option><option>手動承認</option></select></div>
+      <div class="form-group"><label>Google口コミ連携</label><input type="text" value="ChIJxxxxxxxxxxxxxx" placeholder="Google Place ID"></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- ⭐ 口コミ - 投稿一覧 -->
+<div class="page" id="page-review-list">
+  <div class="breadcrumb"><a href="#" onclick="return false">口コミ</a> ＞ 投稿一覧</div>
+  <div class="page-title">口コミ投稿一覧</div>
+  <div class="page-subtitle">口コミ投稿とポイント付与状況を確認します</div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>日時</th><th>投稿者</th><th>店舗</th><th>評価</th><th>ポイント</th><th>ステータス</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>2026/02/28</td><td>佐藤花子</td><td>渋谷店</td><td>⭐⭐⭐⭐⭐</td><td>50pt</td><td><span class="badge badge-success">承認済</span></td><td><button class="btn btn-secondary btn-sm">詳細</button></td></tr>
+        <tr><td>2026/02/27</td><td>鈴木一郎</td><td>新宿店</td><td>⭐⭐⭐⭐</td><td>50pt</td><td><span class="badge badge-success">承認済</span></td><td><button class="btn btn-secondary btn-sm">詳細</button></td></tr>
+        <tr><td>2026/02/27</td><td>匿名ユーザー</td><td>池袋店</td><td>⭐⭐</td><td>—</td><td><span class="badge badge-warning">承認待ち</span></td><td><button class="btn btn-secondary btn-sm">詳細</button> <button class="btn btn-primary btn-sm">承認</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- 💬 サポート - チャット設定 -->
+<!-- ============================== -->
+<div class="page" id="page-support-setting">
+  <div class="breadcrumb"><a href="#" onclick="return false">サポート</a> ＞ チャット設定</div>
+  <div class="page-title">チャットサポート設定</div>
+  <div class="page-subtitle">AIチャットボットの設定とナレッジを管理します</div>
+
+  <div class="card">
+    <div class="card-title">🤖 AIチャット設定</div>
+    ${[['エンドユーザー向けチャット（注文ページ等）',true],['店舗スタッフ向けチャット（ダッシュボード）',true]].map(([l,v])=>`<div class="toggle-row"><span class="label">${l}</span><label class="toggle"><input type="checkbox" ${v?'checked':''}><span class="slider"></span></label></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">📚 ナレッジ設定</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">AIチャットが参照する情報ソースを設定します。有効化した情報から自動学習します。</p>
+    ${[['店舗基本情報（営業時間・住所等）',true],['メニュー情報（価格・アレルギー等）',true],['FAQ（手動登録）',true],['キャンセルポリシー',true],['配達エリア・料金',true]].map(([l,v])=>`<div class="toggle-row"><span class="label">${l}</span><label class="toggle"><input type="checkbox" ${v?'checked':''}><span class="slider"></span></label></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔔 エスカレーション設定</div>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">AIで解決できない場合の転送先を設定します</p>
+    <div class="form-grid">
+      <div class="form-group"><label>転送先メールアドレス</label><input type="email" placeholder="support@sushiro.co.jp"></div>
+      <div class="form-group"><label>Slack Webhook URL</label><input type="url" placeholder="https://hooks.slack.com/..."></div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">💾 保存</button></div>
+  </div>
+</div>
+
+<!-- 💬 サポート - チャット履歴 -->
+<div class="page" id="page-support-history">
+  <div class="breadcrumb"><a href="#" onclick="return false">サポート</a> ＞ チャット履歴</div>
+  <div class="page-title">チャット履歴</div>
+  <div class="page-subtitle">AIチャットの問い合わせ履歴を確認します</div>
+
+  <div class="search-bar">
+    <input type="text" placeholder="🔍 キーワードで検索">
+    <select style="width:140px;padding:8px;border:1px solid var(--border);border-radius:6px"><option>全チャネル</option><option>エンドユーザー</option><option>店舗スタッフ</option></select>
+    <select style="width:140px;padding:8px;border:1px solid var(--border);border-radius:6px"><option>全ステータス</option><option>AI解決</option><option>エスカレーション済</option></select>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>日時</th><th>チャネル</th><th>問い合わせ内容（抜粋）</th><th>ステータス</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>2026/03/01 10:15</td><td>エンドユーザー</td><td>デリバリーの配達時間はどのくらいですか？</td><td><span class="badge badge-success">AI解決</span></td><td><button class="btn btn-secondary btn-sm">詳細</button></td></tr>
+        <tr><td>2026/03/01 09:40</td><td>店舗スタッフ</td><td>プリンターが接続できません</td><td><span class="badge badge-danger">エスカレーション</span></td><td><button class="btn btn-secondary btn-sm">詳細</button></td></tr>
+        <tr><td>2026/02/28 20:30</td><td>エンドユーザー</td><td>アレルギー表示について教えてください</td><td><span class="badge badge-success">AI解決</span></td><td><button class="btn btn-secondary btn-sm">詳細</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- ⛔ BAN管理 - BAN実行 -->
+<!-- ============================== -->
+<div class="page" id="page-ban-execute">
+  <div class="breadcrumb"><a href="#" onclick="return false">BAN管理</a> ＞ BAN実行</div>
+  <div class="page-title">BAN実行</div>
+  <div class="page-subtitle">問題のある会員・ゲストユーザーの注文をブロックします</div>
+
+  <div class="card">
+    <div class="card-title">🚫 BAN対象を指定</div>
+    <div class="form-grid">
+      <div class="form-group"><label>対象タイプ</label>
+        <select id="banType" onchange="document.getElementById('banMemberId').parentNode.style.display=this.value==='member'?'flex':'none'">
+          <option value="email">メールアドレスで指定</option>
+          <option value="phone">電話番号で指定</option>
+          <option value="member">会員IDで指定</option>
+        </select>
+      </div>
+      <div class="form-group"><label>対象値<span class="req">*</span></label><input type="text" placeholder="メールアドレスまたは電話番号を入力"></div>
+      <div class="form-group" id="banMemberId" style="display:none"><label>会員ID</label><input type="text" placeholder="M001"></div>
+      <div class="form-group full"><label>BAN理由<span class="req">*</span></label>
+        <select><option>カスタマーハラスメント</option><option>不正利用</option><option>虚偽注文</option><option>支払い拒否</option><option>その他</option></select>
+      </div>
+      <div class="form-group full"><label>詳細メモ</label><textarea rows="3" placeholder="具体的な状況を記録してください"></textarea></div>
+    </div>
+    <div style="background:#fff3e0;padding:12px;border-radius:8px;margin-top:12px;font-size:12px">
+      ⚠️ BANを実行すると、指定したメールアドレス/電話番号での注文（会員・ゲスト共）がブロックされます。
+    </div>
+    <div class="btn-group"><button class="btn btn-danger">⛔ BAN実行</button></div>
+  </div>
+</div>
+
+<!-- ⛔ BAN管理 - BANリスト -->
+<div class="page" id="page-ban-list">
+  <div class="breadcrumb"><a href="#" onclick="return false">BAN管理</a> ＞ BANリスト</div>
+  <div class="page-title">BANリスト</div>
+  <div class="page-subtitle">現在BANされているユーザーの一覧</div>
+
+  <div class="search-bar"><input type="text" placeholder="🔍 メールアドレス・電話番号で検索"></div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead><tr><th>対象</th><th>タイプ</th><th>理由</th><th>実行日</th><th>実行者</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td>test@example.com</td><td>メール</td><td>カスタマーハラスメント</td><td>2026/02/15</td><td>田中太郎</td><td><button class="btn btn-secondary btn-sm">解除</button></td></tr>
+        <tr><td>090-9999-0000</td><td>電話番号</td><td>虚偽注文</td><td>2026/01/20</td><td>AIden運営</td><td><button class="btn btn-secondary btn-sm">解除</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Menu Modal -->
+<div class="modal-overlay" id="menuModal">
+  <div class="modal">
+    <div class="modal-title">商品追加<button class="modal-close" onclick="document.getElementById('menuModal').classList.remove('show')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>商品名<span class="req">*</span></label><input type="text" placeholder="商品名を入力"></div>
+      <div class="form-group"><label>カテゴリ<span class="req">*</span></label><select><option>握り</option><option>軍艦</option><option>サイドメニュー</option><option>ドリンク</option><option>デザート</option></select></div>
+      <div class="form-group"><label>価格（税込）<span class="req">*</span></label><input type="number" placeholder="¥"></div>
+      <div class="form-group full"><label>商品画像</label><div class="upload-area" style="padding:12px"><div>📤 画像をアップロード</div></div></div>
+      <div class="form-group full"><label>商品説明（短）</label><input type="text" placeholder="カード表示用の短い説明"></div>
+      <div class="form-group full"><label>商品説明（長）</label><textarea rows="3" placeholder="詳細モーダル用の説明"></textarea></div>
+      <div class="form-group full"><label>タグ</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">${['おすすめ','期間限定','季節限定','数量限定','NEW','割引中','一番人気'].map(t=>`<span class="tag" onclick="this.classList.toggle('selected')" style="cursor:pointer">${t}</span>`).join('')}</div>
+      </div>
+      <div class="form-group full"><label>チャネル</label>
+        <div style="display:flex;gap:12px">${['店内注文','持ち帰り','デリバリー'].map(c=>`<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" checked>${c}</label>`).join('')}</div>
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary">追加</button><button class="btn btn-secondary" onclick="document.getElementById('menuModal').classList.remove('show')">キャンセル</button></div>
+  </div>
+</div>
+`;
+
+// ===== UTILITY FUNCTIONS =====
+function switchSubTab(el, group){
+  el.parentNode.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ===== INIT: Show first page =====
+document.querySelector('.nav-cat-header[data-cat="store"]').click();
+
+</script>
+</body>
+</html>
