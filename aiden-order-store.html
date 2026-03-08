@@ -538,13 +538,13 @@ img { max-width:100%; display:block; }
 
 
 /* ===== FREE DELIVERY PROGRESS ===== */
-.fd-progress { background:linear-gradient(135deg,#fff8e1,#fff3e0); border:1px solid #ffe0b2; border-radius:8px; padding:10px 12px; margin:0 16px 12px; }
+.fd-progress { background:linear-gradient(135deg,#fff8e1,#fff3e0); border:1px solid #ffe0b2; border-radius:8px; padding:12px 14px; margin:0 16px 12px; }
 .fd-progress.achieved { background:linear-gradient(135deg,#e8f5e9,#c8e6c9); border-color:#a5d6a7; }
-.fd-progress-label { font-size:12px; font-weight:600; display:flex; justify-content:space-between; margin-bottom:5px; }
-.fd-progress-bar { height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden; }
-.fd-progress-fill { height:100%; background:linear-gradient(90deg,#ff9800,#f57c00); border-radius:3px; transition:width .4s; }
+.fd-progress-label { font-size:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.fd-progress-bar { height:8px; background:#e0e0e0; border-radius:4px; overflow:hidden; }
+.fd-progress-fill { height:100%; background:linear-gradient(90deg,#ff9800,#f57c00); border-radius:4px; transition:width .4s; }
 .fd-progress.achieved .fd-progress-fill { background:linear-gradient(90deg,#66bb6a,#43a047); }
-.fd-progress-hint { font-size:10px; color:#888; margin-top:3px; }
+.fd-progress-hint { font-size:11px; color:#888; margin-top:4px; }
 .fd-float { position:fixed; bottom:68px; left:50%; transform:translateX(-50%); background:#fff; border:1px solid #ffe0b2; border-radius:20px; padding:6px 16px; font-size:11px; font-weight:600; box-shadow:0 2px 12px rgba(0,0,0,.1); z-index:89; display:none; white-space:nowrap; }
 .fd-float.achieved { border-color:#a5d6a7; }
 .fd-float.show { display:block; }
@@ -1831,7 +1831,7 @@ function updateFreeDeliveryProgress() {
     orderSection.classList.toggle('achieved', achieved);
     document.getElementById('orderFdFill').style.width = pct + '%';
     if(achieved) {
-      document.getElementById('orderFdText').innerHTML = '🎉 <b>' + S.freeDeliveryLabel + '</b>が適用されます！';
+      document.getElementById('orderFdText').innerHTML = '🎉 <b>' + S.freeDeliveryLabel + '</b>が適用されました！';
       document.getElementById('orderFdIcon').textContent = '✅';
       document.getElementById('orderFdHint').textContent = '¥' + threshold.toLocaleString() + '以上のご注文で配達料が無料です';
     } else {
