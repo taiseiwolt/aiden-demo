@@ -315,7 +315,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
 <!-- ===== HERO ===== -->
 <div class="hero">
   <div class="hero-video-wrap">
-    <div class="hero-video-placeholder">🥩</div>
+    <div class="hero-video-placeholder" id="hero-bg">🥩</div>
     <div class="hero-overlay">
       <div class="hero-content">
         <div class="hero-catch" id="hero-catch" data-i18n="hero_catch">うまい肉を、炭火で。<br>うまい肉で、心も一杯。</div>
@@ -329,7 +329,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
 <section class="campaign-section" id="campaign">
   <div class="campaign-section-inner">
     <div class="sec-title"><span data-i18n="sec_recommend">おすすめ</span><a href="#" class="sec-title-more" data-i18n="sec_recommend_more">おすすめ一覧</a></div>
-    <div class="campaign-scroll">
+    <div class="campaign-scroll" id="campaign-scroll">
       <div class="campaign-item featured"><div class="campaign-item-img" style="background:linear-gradient(135deg,#1a0000,#4a0000)"><div style="text-align:center;color:white;padding:12px"><div style="font-size:11px;margin-bottom:4px;opacity:.8" data-i18n="campaign_now">現在実施中の</div><div style="font-size:16px;font-weight:700" data-i18n="campaign_label">キャンペーン</div><div style="font-size:36px;margin-top:8px">▶</div></div></div></div>
       <div class="campaign-item"><div class="campaign-item-img" style="background:linear-gradient(135deg,#2d1f0a,#8b6914)">🥩</div><div class="campaign-item-title" data-i18n="camp1">北海道産 黒毛和牛 特上カルビ祭</div></div>
       <div class="campaign-item"><div class="campaign-item-img" style="background:linear-gradient(135deg,#1f2d0a,#698b14)">🥩</div><div class="campaign-item-title" data-i18n="camp2">なまら特選3品盛り 期間限定</div></div>
@@ -392,7 +392,7 @@ footer{background:#222;color:rgba(255,255,255,.7)}
 <section class="guide-section">
   <div class="guide-inner">
     <div class="sec-title" data-i18n="guide_title">炭火亭からのご案内</div>
-    <div class="guide-scroll">
+    <div class="guide-scroll" id="guide-scroll">
       <div class="guide-item"><div class="guide-item-img" style="background:linear-gradient(135deg,#0a2800,#1a5200)">📱</div><div class="guide-item-title" data-i18n="guide1">LINE公式アカウント<br>友だち募集中！</div></div>
       <div class="guide-item"><div class="guide-item-img" style="background:linear-gradient(135deg,#2d0a00,#7a2200)">🎁</div><div class="guide-item-title" data-i18n="guide2">デジタル炭火亭ギフト<br>贈り物に最適</div></div>
       <div class="guide-item"><div class="guide-item-img" style="background:linear-gradient(135deg,#001a2d,#004a7a)">🥇</div><div class="guide-item-title" data-i18n="guide3">60歳以上のお客様対象<br>シニアカード配布中</div></div>
@@ -966,6 +966,44 @@ async function loadFromSupabase() {
           var catLabel = NEWS_CAT_MAP[n.category] || n.category;
           return '<div class="news-item"><span class="news-date">' + ds + '</span><span class="news-cat ' + n.category + '">' + catLabel + '</span><span class="news-title"><a href="' + (n.url || '#') + '">' + n.title + '</a></span></div>';
         }).join('');
+      }
+    }
+
+    // 5. Load media (hero, recommend, guide)
+    var mediaRes = await sb.from('media').select('*').eq('entity_type', 'brand').eq('entity_id', brandId).order('sort_order');
+    if (mediaRes.data && mediaRes.data.length > 0) {
+      var heroMedia = mediaRes.data.filter(function(m){ return m.media_type === 'brand_hero'; });
+      var recMedia = mediaRes.data.filter(function(m){ return m.media_type === 'brand_recommend'; });
+      var guideMedia = mediaRes.data.filter(function(m){ return m.media_type === 'brand_guide'; });
+
+      // Hero background image
+      if (heroMedia.length > 0) {
+        var heroBg = document.getElementById('hero-bg');
+        if (heroBg) {
+          heroBg.textContent = '';
+          heroBg.style.background = 'url(' + heroMedia[0].url + ') center/cover no-repeat';
+        }
+      }
+
+      // Recommend section
+      if (recMedia.length > 0) {
+        var cs = document.getElementById('campaign-scroll');
+        if (cs) {
+          cs.innerHTML = '<div class="campaign-item featured"><div class="campaign-item-img" style="background:linear-gradient(135deg,#1a0000,#4a0000)"><div style="text-align:center;color:white;padding:12px"><div style="font-size:11px;margin-bottom:4px;opacity:.8">現在実施中の</div><div style="font-size:16px;font-weight:700">キャンペーン</div><div style="font-size:36px;margin-top:8px">▶</div></div></div></div>'
+            + recMedia.map(function(m){
+              return '<div class="campaign-item"><div class="campaign-item-img" style="background:url(' + m.url + ') center/cover no-repeat"></div><div class="campaign-item-title">' + (m.title || '') + '</div></div>';
+            }).join('');
+        }
+      }
+
+      // Guide section
+      if (guideMedia.length > 0) {
+        var gs = document.getElementById('guide-scroll');
+        if (gs) {
+          gs.innerHTML = guideMedia.map(function(m){
+            return '<div class="guide-item"><div class="guide-item-img" style="background:url(' + m.url + ') center/cover no-repeat"></div><div class="guide-item-title">' + (m.title || '') + (m.description ? '<br>' + m.description : '') + '</div></div>';
+          }).join('');
+        }
       }
     }
   } catch(e) {

@@ -748,6 +748,29 @@ async function loadCheckoutData() {
     if (storeRow) {
       CHECKOUT_DATA.storeName  = storeRow.name || CHECKOUT_DATA.storeName;
       CHECKOUT_DATA.brandName  = storeRow.brands?.name || CHECKOUT_DATA.brandName;
+
+      // 3. Load coupons from Supabase
+      const brandId = storeRow.brands?.id;
+      if (brandId) {
+        const { data: coupons } = await sb.from('coupons').select('*').eq('brand_id', brandId).eq('is_active', true);
+        if (coupons && coupons.length > 0) {
+          CHECKOUT_DATA.availableCoupons = coupons.map(c => ({
+            id: c.id,
+            code: c.code,
+            name: c.name,
+            discount: c.discount_value,
+            type: c.discount_type,
+            expires: c.expires_at,
+            minOrder: c.min_order_amount || 0
+          }));
+        }
+      }
+
+      // 4. Load store hero image
+      const { data: heroMedia } = await sb.from('media').select('url').eq('entity_type', 'store').eq('entity_id', storeRow.id).eq('media_type', 'store_hero').limit(1);
+      if (heroMedia && heroMedia.length > 0) {
+        CHECKOUT_DATA.heroImg = heroMedia[0].url;
+      }
     }
   } catch(e) { console.warn('Supabase load failed, using fallback:', e); }
 }

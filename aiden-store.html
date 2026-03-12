@@ -1046,6 +1046,28 @@ async function loadStoreFromSupabase() {
     if (newMenu.length > 0) MENU = newMenu;
   }
   console.log('Store loaded from Supabase:', STORE.name, MENU.length, 'categories');
+
+  // Load media (gallery + staff)
+  var {data: mediaRows} = await sb.from('media').select('*').eq('entity_type', 'store').eq('entity_id', storeData.id).order('sort_order');
+  if (mediaRows && mediaRows.length > 0) {
+    var gallery = mediaRows.filter(function(m){ return m.media_type === 'store_gallery'; });
+    var staff = mediaRows.filter(function(m){ return m.media_type === 'store_staff'; });
+    if (gallery.length > 0) {
+      STORE.galleryMedia = gallery.map(function(m){ return {type: m.is_video ? 'video' : 'image', imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
+      STORE.photoMedia = gallery.map(function(m){ return {imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
+    }
+    if (staff.length > 0) {
+      STORE._staffFromDB = staff;
+    }
+  }
+
+  // Load service subscriptions for this store
+  var {data: svcRows} = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'store').eq('entity_id', storeData.id).eq('is_active', true);
+  if (svcRows) {
+    var svcKeys = svcRows.map(function(r){ return r.service_key; });
+    STORE.hasTakeout = svcKeys.indexOf('mo_takeout') >= 0;
+    STORE.hasDelivery = svcKeys.indexOf('mo_delivery') >= 0;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1072,6 +1094,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   buildFaq();
   renderCal();
 
+  // Staff from Supabase
+  if (STORE._staffFromDB && STORE._staffFromDB.length > 0) {
+    var chefEl = document.getElementById('chef-card');
+    if (chefEl) {
+      var s = STORE._staffFromDB[0];
+      chefEl.innerHTML = '<div class="chef-card-img-inner" style="background:url('+s.url+') center/cover no-repeat"></div>'
+        + '<div class="chef-card-body"><div class="chef-card-title">'+(s.title || '')+'</div>'+(s.description || '')+'</div>';
+    }
+  }
+
   // 外部URL設定（管理画面から取得）
   document.getElementById('takeout-btn').href  = STORE.hasTakeout  ? STORE.takeoutUrl  : '#';
   document.getElementById('delivery-btn').href = STORE.hasDelivery ? STORE.deliveryUrl : '#';
@@ -1092,8 +1124,11 @@ function buildGallery() {
   var mode   = n >= 3 ? 'multi' : n === 2 ? 'pair' : 'single';
   track.className = 'gallery-track gallery-mode-' + mode;
   track.innerHTML = media.map(function(m, i) {
+    var inner = m.imgUrl
+      ? '<div class="gallery-slide-inner" style="background:url('+m.imgUrl+') center/cover no-repeat"></div>'
+      : '<div class="gallery-slide-inner placeholder" style="background:'+m.bg+'">'+m.emoji+'</div>';
     return '<div class="gallery-slide" onclick="openLightbox('+i+',null)">'
-      + '<div class="gallery-slide-inner placeholder" style="background:'+m.bg+'">'+m.emoji+'</div>'
+      + inner
       + (m.isVideo ? '<div class="v-badge">▶ 動画</div>' : '')
       + '</div>';
   }).join('');
@@ -1137,8 +1172,9 @@ function buildThumbs() {
   var media = STORE.photoMedia;
   document.getElementById('thumb-count').textContent = '（'+media.length+'枚）';
   document.getElementById('thumb-row').innerHTML = media.slice(0,8).map(function(m, i) {
-    return '<div class="thumb-cell" style="background:'+m.bg+'" onclick="openLightbox('+i+',null,true)">'
-      + '<div class="thumb-emoji">'+m.emoji+'</div>'
+    var bgStyle = m.imgUrl ? 'background:url('+m.imgUrl+') center/cover no-repeat' : 'background:'+m.bg;
+    return '<div class="thumb-cell" style="'+bgStyle+'" onclick="openLightbox('+i+',null,true)">'
+      + (m.imgUrl ? '' : '<div class="thumb-emoji">'+m.emoji+'</div>')
       + (m.isVideo ? '<div class="thumb-v-icon">▶</div>' : '')
       + '</div>';
   }).join('');
@@ -1147,8 +1183,9 @@ function buildPhotoGrid() {
   var media = STORE.photoMedia;
   document.getElementById('photo-count').textContent = '（'+media.length+'件）';
   document.getElementById('photo-grid').innerHTML = media.map(function(m,i) {
-    return '<div class="photo-grid-cell" style="background:'+m.bg+'" onclick="openLightbox('+i+',null,true)">'
-      + m.emoji
+    var bgStyle = m.imgUrl ? 'background:url('+m.imgUrl+') center/cover no-repeat' : 'background:'+m.bg;
+    return '<div class="photo-grid-cell" style="'+bgStyle+'" onclick="openLightbox('+i+',null,true)">'
+      + (m.imgUrl ? '' : m.emoji)
       + (m.isVideo ? '<div class="v-badge" style="top:6px;left:6px">▶ 動画</div>' : '')
       + '</div>';
   }).join('');
@@ -1686,7 +1723,10 @@ function openLightbox(idx, fallbackEmoji, usePhotoMedia) {
   if(idx !== null && media && media[idx]) {
     lbMedia = media;
     lbIdx   = idx;
-    document.getElementById('lightbox-img').innerHTML = '<div style="font-size:100px;padding:40px;display:flex;align-items:center;justify-content:center">'+media[idx].emoji+'</div>';
+    var m = media[idx];
+    document.getElementById('lightbox-img').innerHTML = m.imgUrl
+      ? '<img src="'+m.imgUrl+'" style="max-width:100%;max-height:80vh;object-fit:contain">'
+      : '<div style="font-size:100px;padding:40px;display:flex;align-items:center;justify-content:center">'+m.emoji+'</div>';
   } else {
     lbMedia = []; lbIdx = 0;
     document.getElementById('lightbox-img').innerHTML = '<div style="font-size:100px;padding:40px">'+fallbackEmoji+'</div>';
@@ -1698,7 +1738,10 @@ function closeLightbox(){ document.getElementById('lightbox').classList.remove('
 function moveLightbox(dir) {
   if(!lbMedia.length) return;
   lbIdx = (lbIdx + dir + lbMedia.length) % lbMedia.length;
-  document.getElementById('lightbox-img').innerHTML = '<div style="font-size:100px;padding:40px">'+lbMedia[lbIdx].emoji+'</div>';
+  var m = lbMedia[lbIdx];
+  document.getElementById('lightbox-img').innerHTML = m.imgUrl
+    ? '<img src="'+m.imgUrl+'" style="max-width:100%;max-height:80vh;object-fit:contain">'
+    : '<div style="font-size:100px;padding:40px">'+m.emoji+'</div>';
 }
 document.getElementById('lightbox').addEventListener('click', function(e){ if(e.target===this) closeLightbox(); });
 document.getElementById('modal-bg').addEventListener('click', function(e){ if(e.target===this) closeModal(); });

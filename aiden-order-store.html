@@ -1380,6 +1380,18 @@ async function loadFromSupabase() {
       };
     }).filter(Boolean);
 
+    // 8. Load store hero image from media
+    var { data: heroMedia } = await sb.from('media').select('url').eq('entity_type', 'store').eq('entity_id', storeRows.id).eq('media_type', 'store_hero').limit(1);
+    if (heroMedia && heroMedia.length > 0) {
+      STORE_DATA.storeHeroImg = heroMedia[0].url;
+    }
+
+    // 9. Load service subscriptions for this store
+    var { data: svcRows } = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'store').eq('entity_id', storeRows.id).eq('is_active', true);
+    if (svcRows) {
+      STORE_DATA._enabledServices = svcRows.map(r => r.service_key);
+    }
+
   } catch(e) {
     console.warn('Supabase load failed, using demo data:', e);
   }
@@ -1394,6 +1406,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.style.pointerEvents = 'none';
 
   await loadFromSupabase();
+
+  // Service subscription check: verify this store supports the current order mode
+  if (STORE_DATA._enabledServices) {
+    const modeMap = { delivery: 'mo_delivery', takeout: 'mo_takeout', dinein: 'mo_dinein', dine: 'mo_dinein' };
+    const requiredKey = modeMap[orderMode];
+    if (requiredKey && !STORE_DATA._enabledServices.includes(requiredKey)) {
+      document.body.style.opacity = '';
+      document.body.style.pointerEvents = '';
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:sans-serif;padding:20px"><div><div style="font-size:48px;margin-bottom:16px">🚫</div><h2 style="margin-bottom:8px">このサービスはご利用いただけません</h2><p style="color:#636e72;font-size:14px">この店舗では現在「' + (orderMode === 'delivery' ? 'デリバリー' : orderMode === 'takeout' ? 'お持ち帰り' : '店内注文') + '」サービスをご利用いただけません。</p><a href="./aiden-store.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#D32F2F;color:white;border-radius:8px;text-decoration:none;font-weight:700">店舗ページへ戻る</a></div></div>';
+      return;
+    }
+  }
 
   document.body.style.opacity = '';
   document.body.style.pointerEvents = '';

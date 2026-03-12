@@ -367,7 +367,7 @@ function renderResults(stores) {
         return on ? '<span class="store-attr-tag on">'+a.icon+' '+a.label+'</span>' : '';
       }).join('');
       html += '<a class="store-card" href="'+s.storeUrl+'">'
-        + '<div class="store-card-img" style="background:'+s.bg+'">🏪<span class="store-avail '+availCls+'">'+availLabel+'</span></div>'
+        + '<div class="store-card-img" style="background:'+s.bg+'">'+(s.thumbUrl ? '' : '🏪')+'<span class="store-avail '+availCls+'">'+availLabel+'</span></div>'
         + '<div class="store-card-body">'
         + '<div class="store-card-name">'+s.name+'</div>'
         + '<div class="store-card-addr">'+s.addr+'</div>'
@@ -431,13 +431,22 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 async function loadStoresFromSupabase() {
   var {data: stores} = await sb.from('stores').select('*').eq('brand_id', BRAND_ID).order('name');
   if (!stores || stores.length === 0) return;
+
+  // Fetch thumbnails
+  var storeIds = stores.map(function(s){ return s.id; });
+  var {data: thumbs} = await sb.from('media').select('entity_id, url').eq('entity_type', 'store').eq('media_type', 'store_thumbnail').in('entity_id', storeIds);
+  var thumbMap = {};
+  if (thumbs) thumbs.forEach(function(t){ thumbMap[t.entity_id] = t.url; });
+
   var bgs = ['linear-gradient(135deg,#1a0000,#5a1a1a)','linear-gradient(135deg,#1a1a00,#5a5a00)','linear-gradient(135deg,#001a00,#005a00)','linear-gradient(135deg,#001a1a,#005a5a)','linear-gradient(135deg,#1a001a,#5a005a)','linear-gradient(135deg,#001a2a,#005a7a)','linear-gradient(135deg,#2a1a00,#7a5000)'];
   STORES = stores.map(function(s, i) {
     var prefCity = (s.address || '').substring(0, 3);
     return {
       id: s.slug || s.id, name: s.name.replace('焼肉 炭火亭 ','炭火亭 '), pref: prefCity, city: '',
       addr: s.address || '', station: '', hours: '17:00〜23:00',
-      bg: bgs[i % bgs.length], avail: s.status === 'open' ? 'ok' : s.status === 'closed' ? 'full' : 'few',
+      bg: thumbMap[s.id] ? 'url('+thumbMap[s.id]+') center/cover no-repeat' : bgs[i % bgs.length],
+      thumbUrl: thumbMap[s.id] || null,
+      avail: s.status === 'open' ? 'ok' : s.status === 'closed' ? 'full' : 'few',
       attrs: ['credit','qrpay','cash'], storeUrl: './aiden-store.html'
     };
   });
