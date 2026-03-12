@@ -1028,6 +1028,16 @@ async function loadStoreFromSupabase() {
   STORE.address = storeData.address || STORE.address;
   STORE.phone = storeData.phone || STORE.phone;
 
+  // Flags
+  if (storeData.seat_only_reservation !== null && storeData.seat_only_reservation !== undefined) STORE.seatOnlyReservation = storeData.seat_only_reservation;
+  if (storeData.has_takeout !== null && storeData.has_takeout !== undefined) STORE.hasTakeout = storeData.has_takeout;
+  if (storeData.has_delivery !== null && storeData.has_delivery !== undefined) STORE.hasDelivery = storeData.has_delivery;
+
+  // Cancel policy
+  if (storeData.cancel_no_show !== null) STORE.cancel.cancelNoShow = storeData.cancel_no_show;
+  if (storeData.cancel_same_day !== null) STORE.cancel.cancelSameDay = storeData.cancel_same_day;
+  if (storeData.cancel_3days !== null) STORE.cancel.cancel3days = storeData.cancel_3days;
+
   var {data: cats} = await sb.from('categories').select('*').eq('brand_id', storeData.brand_id).order('sort_order');
   var {data: products} = await sb.from('products').select('*').eq('brand_id', storeData.brand_id);
   var {data: sizes} = await sb.from('product_sizes').select('*');

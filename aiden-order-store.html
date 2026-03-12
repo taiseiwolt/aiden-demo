@@ -1289,6 +1289,17 @@ async function loadFromSupabase() {
       lng:          storeRows.lng     || STORE_DATA.lng,
       hours:        hoursFormatted.length ? hoursFormatted : STORE_DATA.hours,
       deliveryHours: hoursFormatted.length ? hoursFormatted : STORE_DATA.deliveryHours,
+      // Delivery settings
+      deliveryRadiusKm:      storeRows.delivery_radius_km    ?? STORE_DATA.deliveryRadiusKm,
+      deliveryFee:           storeRows.delivery_fee           ?? STORE_DATA.deliveryFee,
+      minOrderAmount:        storeRows.min_order_amount       ?? STORE_DATA.minOrderAmount,
+      deliveryTimeMin:       storeRows.delivery_time_min      ?? STORE_DATA.deliveryTimeMin,
+      deliveryTimeMax:       storeRows.delivery_time_max      ?? STORE_DATA.deliveryTimeMax,
+      smallOrderSurchargeMax: storeRows.small_order_surcharge_max ?? STORE_DATA.smallOrderSurchargeMax,
+      minOrderPolicy:        storeRows.min_order_policy       || STORE_DATA.minOrderPolicy,
+      freeDeliveryThreshold: storeRows.free_delivery_threshold ?? STORE_DATA.freeDeliveryThreshold,
+      // Flags
+      storeRequestEnabled:   storeRows.store_request_enabled  ?? STORE_DATA.storeRequestEnabled,
     };
 
     // 4. アクティブなメニューパターン取得
