@@ -4417,6 +4417,12 @@ async function loadAdminFromSupabase() {
     }
 
     console.log('Admin: Supabase loaded -', STORES.length, 'stores,', PRODUCTS.length, 'products,', REVIEWS.length, 'reviews');
+
+    // 9. Service subscriptions for this brand
+    const {data: svcRows} = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'brand').eq('entity_id', BRAND_ID).eq('is_active', true);
+    if (svcRows) {
+      window._brandServices = svcRows.map(r => r.service_key);
+    }
   } catch(e) {
     console.warn('Supabase load failed, using demo data:', e);
   }
@@ -7733,7 +7739,34 @@ const _origShowPageSales = showPage;
   document.querySelector('.nav-cat-header[data-cat="store"]').click();
   updatePolicyPreview();
   renderMenuPatternList();
+  applyServiceVisibility();
 })();
+
+function applyServiceVisibility() {
+  var svcs = window._brandServices || [];
+  if (svcs.length === 0) return; // no data = show everything (demo mode)
+  var hasAI = svcs.some(function(s){ return s.indexOf('ai_') === 0; });
+  var hasCRM = svcs.some(function(s){ return s.indexOf('crm_') === 0; });
+  // Hide CRM配信 if no CRM plan
+  if (!hasCRM) {
+    var crmEl = document.querySelector('.nav-subitem[data-page="member-crm"]');
+    if (crmEl) crmEl.style.display = 'none';
+  }
+  // Hide SNS管理 & コンテンツ制作 if no AI plan
+  if (!hasAI) {
+    var snsEl = document.querySelector('.nav-subitem[data-page="ai-sns"]');
+    if (snsEl) snsEl.style.display = 'none';
+    var ccCat = document.querySelector('.nav-category[data-cat="content-create"]');
+    if (ccCat) ccCat.style.display = 'none';
+  }
+  // Hide AI分析 buttons in sales if no ai_pro/ai_expert
+  var hasAIPro = svcs.indexOf('ai_pro') >= 0 || svcs.indexOf('ai_expert') >= 0;
+  if (!hasAIPro) {
+    document.querySelectorAll('[onclick*="sdAiAnalysis"]').forEach(function(btn){ btn.style.display = 'none'; });
+    var aiSummary = document.getElementById('aiSalesSummary');
+    if (aiSummary) aiSummary.style.display = 'none';
+  }
+}
 
 // ===== MENU SUB TAB =====
 function switchMenuSubTab(tab) {
