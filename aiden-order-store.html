@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>つきじ海賓 川崎東古市場店 | AIden モバイルオーダー</title>
+<title>AIden モバイルオーダー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1425,7 +1425,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (requiredKey && !STORE_DATA._enabledServices.includes(requiredKey)) {
       document.body.style.opacity = '';
       document.body.style.pointerEvents = '';
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:sans-serif;padding:20px"><div><div style="font-size:48px;margin-bottom:16px">🚫</div><h2 style="margin-bottom:8px">このサービスはご利用いただけません</h2><p style="color:#636e72;font-size:14px">この店舗では現在「' + (orderMode === 'delivery' ? 'デリバリー' : orderMode === 'takeout' ? 'お持ち帰り' : '店内注文') + '」サービスをご利用いただけません。</p><a href="./aiden-store.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#D32F2F;color:white;border-radius:8px;text-decoration:none;font-weight:700">店舗ページへ戻る</a></div></div>';
+      document.title = STORE_DATA.storeName + ' | AIden モバイルオーダー';
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:sans-serif;padding:20px"><div><div style="font-size:48px;margin-bottom:16px">🚫</div><h2 style="margin-bottom:8px">このサービスはご利用いただけません</h2><p style="color:#636e72;font-size:14px">' + STORE_DATA.storeName + ' では現在「' + (orderMode === 'delivery' ? 'デリバリー' : orderMode === 'takeout' ? 'お持ち帰り' : '店内注文') + '」サービスをご利用いただけません。</p><a href="./aiden-store.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#D32F2F;color:white;border-radius:8px;text-decoration:none;font-weight:700">店舗ページへ戻る</a></div></div>';
       return;
     }
   }
