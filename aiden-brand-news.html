@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ニュース・キャンペーン | 炭火亭</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--brand-primary:#D32F2F;--brand-primary-dark:#B71C1C;--brand-primary-light:#FFEBEE;--brand-header-bg:#D32F2F;--brand-header-text:#FFFFFF;--brand-font:'Noto Sans JP',sans-serif;--brand-font-color:#333;--text2:#666;--text3:#999;--bg:#fff;--bg2:#F8F8F8;--border:#E0E0E0}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -230,11 +230,10 @@ async function loadNewsFromSupabase() {
     var ds = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
     return { id: i+1, date: ds, cat: n.category, title: {ja: n.title, en: n.title, zh: n.title, ko: n.title, fr: n.title, it: n.title, id: n.title} };
   });
-  console.log('News loaded from Supabase:', NEWS_DATA.length);
 }
 
 document.addEventListener('DOMContentLoaded', async function(){
-  try { await loadNewsFromSupabase(); } catch(e) { console.warn('Supabase news load failed:', e); }
+  try { await loadNewsFromSupabase(); } catch(e) { /* ignored */ }
   applyBrand(); render();
 });
 </script>

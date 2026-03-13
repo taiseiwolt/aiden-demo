@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>モバイルオーダー | 炭火亭</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -225,7 +225,7 @@ input,select,textarea{font-family:var(--font)}
   padding:12px 14px;white-space:nowrap;
   font-size:13px;font-weight:500;color:var(--text3);
   border-bottom:2px solid transparent;
-  transition:all .15s;flex-shrink:0;
+  transition:all .15s;flex-shrink:0;cursor:pointer;
 }
 .cat-tab.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:700}
 
@@ -348,7 +348,7 @@ input,select,textarea{font-family:var(--font)}
 .opt-badge-opt{background:var(--border);color:var(--text3)}
 .opt-item{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 0;border-bottom:1px solid var(--border);
+  padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;
 }
 .opt-item:last-child{border-bottom:none}
 .opt-item-left{display:flex;align-items:center;gap:10px}
@@ -972,12 +972,6 @@ input,select,textarea{font-family:var(--font)}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
-
-
-
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
 </div>
 <script>
 
@@ -1551,13 +1545,10 @@ function geocodeAndNext(){
       if(data && data.length > 0){
         pendingLat = parseFloat(data[0].lat);
         pendingLng = parseFloat(data[0].lon);
-        console.log('[GEOCODE] 住所→座標:', query, pendingLat, pendingLng);
       } else {
-        console.warn('[GEOCODE] 結果なし、ZIP座標を使用');
       }
     })
     .catch(function(err){
-      console.warn('[GEOCODE] エラー、ZIP座標を使用:', err);
     })
     .finally(function(){
       btn.textContent = origText;
@@ -1586,7 +1577,6 @@ function onZipInput(val){
     pendingLat = cached[1];
     pendingLng = cached[2];
     document.getElementById('addr-street').value = cached[0];
-    console.log('[ZIP CACHE HIT]', key, '->', pendingLat, pendingLng);
     setTimeout(function(){ goAddrStep(2); document.getElementById('addr-street').focus(); }, 200);
     return;
   }
@@ -1644,18 +1634,14 @@ function onZipInput(val){
 
         if(addrText){
           document.getElementById('addr-street').value = addrText;
-          console.log('[ZIP API]', key, '->', pendingLat, pendingLng, '/', addrText);
           /* セッションキャッシュに追加（再入力時に即時応答） */
           ZIP_MAP[key] = [addrText, pendingLat, pendingLng];
         } else {
-          console.warn('[ZIP API] 住所パース失敗。address:', JSON.stringify(a));
         }
       } else {
-        console.warn('[ZIP API] 該当なし:', key);
         if(noteEl){ noteEl.textContent = '郵便番号が見つかりません。住所を直接入力してください。'; noteEl.style.color = 'var(--orange)'; }
       }
     })    .catch(function(e){
-      console.warn('[ZIP API] エラー:', e);
       if(noteEl){ noteEl.textContent = '通信エラー。住所を直接入力してください。'; noteEl.style.color = 'var(--orange)'; }
     })
     .finally(function(){
@@ -1731,7 +1717,6 @@ function useAddress(){
   userAddress  = street + (building ? ' ' + building : '');
   userLat = pinLat !== null ? pinLat : pendingLat;
   userLng = pinLng !== null ? pinLng : pendingLng;
-  console.log('[DELIVERY PIN]', {lat:userLat, lng:userLng, address:userAddress});
   closeAddrModal();
   document.getElementById('addr-btn-text').textContent = userAddress;
   if(mainMap){
@@ -1849,7 +1834,7 @@ function onOrderBtnClick(btn){
       hasDelivery: s.hasDelivery,
       orderMode: orderMode
     }));
-  } catch(e) { console.warn('sessionStorage save failed:', e); }
+  } catch(e) { /* ignored */ }
 
   // Navigate to order-store page (versionless)
   window.location.href = './aiden-order-store.html';

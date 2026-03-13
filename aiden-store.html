@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">焼肉 炭火亭 渋谷店</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 /* =====================================================
    VARIABLES & RESET
@@ -1055,7 +1055,6 @@ async function loadStoreFromSupabase() {
     }).filter(function(c) { return c.items.length > 0; });
     if (newMenu.length > 0) MENU = newMenu;
   }
-  console.log('Store loaded from Supabase:', STORE.name, MENU.length, 'categories');
 
   // Load media (gallery + staff)
   var {data: mediaRows} = await sb.from('media').select('*').eq('entity_type', 'store').eq('entity_id', storeData.id).order('sort_order');
@@ -1081,7 +1080,7 @@ async function loadStoreFromSupabase() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-  try { await loadStoreFromSupabase(); } catch(e) { console.warn('Supabase store load failed:', e); }
+  try { await loadStoreFromSupabase(); } catch(e) { /* ignored */ }
   document.getElementById('page-title').textContent = STORE.name;
   document.getElementById('id-name').textContent = STORE.name;
   document.getElementById('id-station').textContent = STORE.station;
@@ -1109,8 +1108,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     var chefEl = document.getElementById('chef-card');
     if (chefEl) {
       var s = STORE._staffFromDB[0];
-      chefEl.innerHTML = '<div class="chef-card-img-inner" style="background:url('+s.url+') center/cover no-repeat"></div>'
-        + '<div class="chef-card-body"><div class="chef-card-title">'+(s.title || '')+'</div>'+(s.description || '')+'</div>';
+      chefEl.innerHTML = '<div class="chef-card-img-inner" style="background:url('+encodeURI(s.url)+') center/cover no-repeat"></div>'
+        + '<div class="chef-card-body"><div class="chef-card-title"></div><div class="chef-card-desc"></div></div>';
+      chefEl.querySelector('.chef-card-title').textContent = s.title || '';
+      chefEl.querySelector('.chef-card-desc').textContent = s.description || '';
     }
   }
 
@@ -1318,7 +1319,7 @@ function buildCourseList() {
   // 席のみ予約（コースカードと同じスタイルで表示）
   if (STORE.seatOnlyReservation) {
     html += '<div class="course-card">'
-          + '<div class="course-img-inner" style="background:linear-gradient(135deg,#3a3a3a,#666)" onclick="">🪑</div>'
+          + '<div class="course-img-inner" style="background:linear-gradient(135deg,#3a3a3a,#666)" onclick="openLightbox(null,\'🪑\')">🪑</div>'
           + '<div class="course-info">'
           + '<div class="course-name">席のみ予約</div>'
           + '<div class="course-desc">コースを選ばず、席だけご予約いただけます。当日メニューよりお好みでご注文ください。</div>'
@@ -1351,7 +1352,7 @@ function buildMenuList() {
           return '<div class="menu-item">'
             + '<div class="menu-item-img" style="background:'+item.bg+'" onclick="openLightbox(null,\''+item.emoji+'\')">'+item.emoji+'</div>'
             + '<div class="menu-item-body">'
-            + (item.recommended ? '<div class="menu-item-recommended">✗ おすすめ</div>' : '')
+            + (item.recommended ? '<div class="menu-item-recommended">★ おすすめ</div>' : '')
             + '<div class="menu-item-name">'+item.name+'</div>'
             + (item.outline ? '<div class="menu-item-outline">'+item.outline+'</div>' : '')
             + (cat.isCourse ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">概要タブの予約ボタンからご予約ください</div>' : '')

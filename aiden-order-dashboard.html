@@ -6,7 +6,7 @@
 <title>AIden 受注ダッシュボード v0.21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;background:#F7F7F7;color:#1A1A1A}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#D0D0D0;border-radius:2px}
@@ -567,7 +567,7 @@ const LOGOS={
 
 // ===== DATA =====
 const S={new:{l:"新規",c:"#DC3232",b:"#FFF0F0"},cooking:{l:"調理中",c:"#1A1A1A",b:"#F2F2F2"},ready:{l:"受け渡し待ち",c:"#1A1A1A",b:"#E8F5E9"},done:{l:"受渡済",c:"#999",b:"#F7F7F7"},cancelled:{l:"取消",c:"#BBB",b:"#FAFAFA"}};
-const TI={dine:"🍽",takeout:"🥡",delivery:"🛵"},TL={dine:"店内",takeout:"持帰り",delivery:"デリバリー"};
+const TI={dine:"🍽",takeout:"🥡",delivery:"🛵"},TL={dine:"店内",takeout:"お持ち帰り",delivery:"デリバリー"};
 const NX={new:"受注する",cooking:"調理完了",ready:"受渡済にする"};
 const NAV=[{id:"orders",i:"📋",l:"注文"},{id:"history",i:"📊",l:"売上"},{id:"menu",i:"🍽",l:"メニュー"},{id:"settings",i:"⚙",l:"設定"}];
 const FT=[{id:"all",l:"すべて"},{id:"new",l:"新規"},{id:"cooking",l:"調理中"},{id:"ready",l:"受け渡し待ち"},{id:"done",l:"受渡済"},{id:"cancelled",l:"取消"}];
@@ -646,7 +646,6 @@ async function loadFromSupabase() {
     };
   });
   oCtr = 1000 + O.length;
-  console.log('Supabase loaded:', O.length, 'orders');
 }
 
 // ===== GENERATE ORDERS =====
@@ -979,9 +978,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('#ptgl')&&!e.target.c
   document.querySelector('.main').style.opacity = '0.4';
   try {
     await loadFromSupabase();
-    console.log('Dashboard: Supabase data loaded');
   } catch(e) {
-    console.warn('Supabase load failed, using demo data:', e);
     genOrders();
   }
   document.querySelector('.main').style.opacity = '1';

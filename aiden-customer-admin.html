@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AIden 顧客管理画面</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700;800&family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
 // ─── 素材画像インポート ──────────────────────────────
 var _snsImgFiles = [];
 var _snsSelectedRatio = '1:1';
@@ -225,7 +226,7 @@ body { font-family:'Poppins','M PLUS Rounded 1c',sans-serif; background:var(--bg
 .breadcrumb a { color:var(--accent); text-decoration:none; }
 
 /* === CARDS / FORMS === */
-.card { background:var(--card); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+.card { background:var(--card); border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06); overflow-x:auto; }
 .card-title { font-size:15px; font-weight:700; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
@@ -4416,7 +4417,6 @@ async function loadAdminFromSupabase() {
       }));
     }
 
-    console.log('Admin: Supabase loaded -', STORES.length, 'stores,', PRODUCTS.length, 'products,', REVIEWS.length, 'reviews');
 
     // 9. Service subscriptions for this brand
     const {data: svcRows} = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'brand').eq('entity_id', BRAND_ID).eq('is_active', true);
@@ -4424,7 +4424,6 @@ async function loadAdminFromSupabase() {
       window._brandServices = svcRows.map(r => r.service_key);
     }
   } catch(e) {
-    console.warn('Supabase load failed, using demo data:', e);
   }
 }
 
@@ -8386,7 +8385,7 @@ function setProductDisplayPeriod(itemId) {
     '<div style="display:flex;gap:12px;justify-content:flex-end">' +
     '<button class="btn btn-secondary" onclick="document.getElementById(\'mediaSlotModal\').style.display=\'none\'">キャンセル</button>' +
     '<button class="btn btn-secondary" onclick="clearProductPeriod(\''+itemId+'\')">期間をクリア</button>' +
-    '<button class="btn btn-primary" onclick="saveProductPeriod(\''+itemId+'\')">保存する</button>' +
+    '<button class="btn btn-primary" onclick="saveProductPeriod(\''+itemId+'\')">保存</button>' +
     '</div></div>';
   modal.style.display = 'flex';
 }
@@ -8427,7 +8426,7 @@ function setPatternDisplayPeriod(mpId) {
     '<div style="display:flex;gap:12px;justify-content:flex-end">' +
     '<button class="btn btn-secondary" onclick="document.getElementById(\'mediaSlotModal\').style.display=\'none\'">キャンセル</button>' +
     '<button class="btn btn-secondary" onclick="clearPatternPeriod(\''+mpId+'\')">期間をクリア</button>' +
-    '<button class="btn btn-primary" onclick="savePatternPeriod(\''+mpId+'\')">保存する</button>' +
+    '<button class="btn btn-primary" onclick="savePatternPeriod(\''+mpId+'\')">保存</button>' +
     '</div></div>';
   modal.style.display = 'flex';
 }
@@ -8467,7 +8466,7 @@ function renameMenuPattern(mpId) {
     '<input type="text" id="renamePatternInput" value="'+mp.name+'" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;box-sizing:border-box;margin-bottom:16px">' +
     '<div style="display:flex;gap:12px;justify-content:flex-end">' +
     '<button class="btn btn-secondary" onclick="document.getElementById(\'mediaSlotModal\').style.display=\'none\'">キャンセル</button>' +
-    '<button class="btn btn-primary" onclick="saveRenamePattern(\''+mpId+'\')">保存する</button>' +
+    '<button class="btn btn-primary" onclick="saveRenamePattern(\''+mpId+'\')">保存</button>' +
     '</div></div>';
   modal.style.display = 'flex';
   setTimeout(() => { document.getElementById('renamePatternInput').focus(); document.getElementById('renamePatternInput').select(); }, 100);
@@ -8505,7 +8504,7 @@ function managePatternStores(mpId) {
   html += '</div>';
   html += '<div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px">';
   html += '<button class="btn btn-secondary" onclick="closeStoreLinkModal()">キャンセル</button>';
-  html += '<button class="btn btn-primary" onclick="saveStoreLinks(\''+mpId+'\')">保存する</button>';
+  html += '<button class="btn btn-primary" onclick="saveStoreLinks(\''+mpId+'\')">保存</button>';
   html += '</div></div>';
 
   // Show in mediaSlotModal (reuse modal container)

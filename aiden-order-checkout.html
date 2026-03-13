@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>注文の最終確認 | AIden モバイルオーダー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
   --brand: #D32F2F;
@@ -447,7 +447,7 @@ select.form-input { appearance:none; background:url("data:image/svg+xml,%3Csvg x
 
     <!-- Mode Tabs -->
     <div class="mode-tabs">
-      <div class="mode-tab active" id="tabDelivery" onclick="switchMode('delivery')">🛵 配達</div>
+      <div class="mode-tab active" id="tabDelivery" onclick="switchMode('delivery')">🛵 デリバリー</div>
       <div class="mode-tab" id="tabTakeout" onclick="switchMode('takeout')">🏪 お持ち帰り</div>
     </div>
 
@@ -642,7 +642,7 @@ select.form-input { appearance:none; background:url("data:image/svg+xml,%3Csvg x
         <span class="value" id="priceSubtotal">¥0</span>
       </div>
       <div class="price-row" id="priceDeliveryRow">
-        <span class="label">配達</span>
+        <span class="label">デリバリー</span>
         <span class="value" id="priceDelivery">¥0</span>
       </div>
       <div class="price-row" id="priceSurchargeRow" style="display:none">
@@ -687,6 +687,11 @@ const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
 const STORE_SLUG   = 'sumibite-shibuya';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===================================================================
+// UTILITY
+// ===================================================================
+function escapeHtml(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ===================================================================
 // CHECKOUT_DATA - sessionStorage（カート）＋Supabase（店舗設定）で構築
@@ -735,7 +740,7 @@ async function loadCheckoutData() {
       const parsed = JSON.parse(saved);
       CHECKOUT_DATA = { ...CHECKOUT_DATA, ...parsed };
     }
-  } catch(e) { console.warn('sessionStorage read failed:', e); }
+  } catch(e) { /* ignored */ }
 
   // 2. Supabaseから店舗設定を取得して上書き
   try {
@@ -779,7 +784,7 @@ async function loadCheckoutData() {
         CHECKOUT_DATA.heroImg = heroMedia[0].url;
       }
     }
-  } catch(e) { console.warn('Supabase load failed, using fallback:', e); }
+  } catch(e) { /* ignored */ }
 }
 
 // ===================================================================
@@ -962,8 +967,8 @@ function renderOrderItems() {
     <div class="order-item">
       <img class="order-item-img" src="${item.img}" alt="">
       <div class="order-item-info">
-        <div class="order-item-name">${item.name}</div>
-        ${item.optText ? `<div class="order-item-opts">${item.optText}</div>` : ''}
+        <div class="order-item-name">${escapeHtml(item.name)}</div>
+        ${item.optText ? `<div class="order-item-opts">${escapeHtml(item.optText)}</div>` : ''}
       </div>
       <div class="order-item-price" id="itemPrice${idx}">¥${(item.price * item.qty).toLocaleString()}</div>
       <div class="order-item-qty-badge" id="qtyBadge${idx}" onclick="toggleQtyControls(${idx})">${item.qty}</div>
@@ -1057,7 +1062,7 @@ function renderPaymentMethods() {
         </div>
         <div class="form-group" style="margin-top:8px">
           <label>カード名義</label>
-          <input type="text" class="form-input" id="cardHolder" placeholder="TARO YAMADA" oninput="validateForm()">
+          <input type="text" class="form-input" id="cardHolder" placeholder="カード名義（ローマ字）" oninput="validateForm()">
         </div>
         <div class="card-secure-note">
           🔒 クレジットカードはStripeによって安全に処理されます。3Dセキュア認証に対応しています。お客様の情報はPCI DSS準拠の環境で保護されます。
@@ -1125,12 +1130,24 @@ function renderCouponList() {
   el.innerHTML = CHECKOUT_DATA.availableCoupons.map(c => `
     <div class="coupon-item" onclick="applyCouponFromList('${c.id}',this)">
       <div>
-        <div class="coupon-item-name">${c.name}</div>
-        <div class="coupon-item-exp">有効期限: ${c.expires}</div>
+        <div class="coupon-item-name">${escapeHtml(c.name)}</div>
+        <div class="coupon-item-exp">有効期限: ${escapeHtml(c.expires)}</div>
       </div>
       <div class="coupon-item-val">${c.type==='percent' ? c.discount+'%OFF' : '-¥'+c.discount.toLocaleString()}</div>
     </div>
   `).join('');
+}
+
+function validateCoupon(coupon) {
+  if(coupon.expires && new Date(coupon.expires) < new Date(new Date().toDateString())) {
+    alert('このクーポンは有効期限が切れています');
+    return false;
+  }
+  if(coupon.minOrder && CHECKOUT_DATA.subtotal < coupon.minOrder) {
+    alert('このクーポンは¥' + coupon.minOrder.toLocaleString() + '以上のご注文で利用可能です');
+    return false;
+  }
+  return true;
 }
 
 function applyCouponCode() {
@@ -1138,6 +1155,7 @@ function applyCouponCode() {
   if(!code) return;
   const found = CHECKOUT_DATA.availableCoupons.find(c => c.code === code);
   if(found) {
+    if(!validateCoupon(found)) return;
     appliedCoupon = found;
     showCouponApplied(found);
   } else {
@@ -1150,6 +1168,7 @@ function applyCouponFromList(couponId, el) {
   el.classList.add('selected');
   const found = CHECKOUT_DATA.availableCoupons.find(c => c.id === couponId);
   if(found) {
+    if(!validateCoupon(found)) { el.classList.remove('selected'); return; }
     appliedCoupon = found;
     showCouponApplied(found);
   }
@@ -1232,7 +1251,7 @@ function goBackToMenu() {
   }));
   try {
     sessionStorage.setItem('aiden_cart_restore', JSON.stringify(storeCart));
-  } catch(e) { console.warn('sessionStorage save failed:', e); }
+  } catch(e) { /* ignored */ }
   // Navigate to store menu page
   const menuUrl = CHECKOUT_DATA.menuPageUrl || './aiden-order-store.html';
   window.location.href = menuUrl;
