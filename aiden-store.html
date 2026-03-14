@@ -646,18 +646,18 @@ img,video{max-width:100%;display:block}
           <div class="f-field">
             <div class="f-label">お名前 <span class="f-req">*</span></div>
             <input id="m-name" type="text" placeholder="山田 花子" class="f-input" oninput="clearErr('m-name')">
-            <div class="f-error" id="err-name"></div>
+            <div class="f-error" id="err-m-name"></div>
           </div>
           <div class="f-field">
             <div class="f-label">電話番号 <span class="f-req">*</span></div>
             <input id="m-phone" type="tel" placeholder="09012345678" class="f-input" oninput="clearErr('m-phone')">
-            <div class="f-error" id="err-phone"></div>
+            <div class="f-error" id="err-m-phone"></div>
           </div>
         </div>
         <div class="f-field">
           <div class="f-label">メールアドレス <span class="f-req">*</span></div>
           <input id="m-email" type="email" placeholder="example@email.com" class="f-input" oninput="clearErr('m-email')">
-          <div class="f-error" id="err-email"></div>
+          <div class="f-error" id="err-m-email"></div>
         </div>
         <div class="f-field">
           <div class="f-label">ご要望・アレルギー</div>
@@ -1509,7 +1509,10 @@ function openModal(storeName) {
   document.getElementById('cap-alert').className = 'cap-alert';
   document.getElementById('step1-btn').disabled = true;
   document.getElementById('step1-btn').style.opacity = '.35';
-  document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('m-date').value = selDate || new Date().toISOString().split('T')[0];
+  // Sync guest count from widget
+  var widgetGuests = document.getElementById('w-guests').value;
+  if (widgetGuests) document.getElementById('m-guests').value = widgetGuests;
 
   // 店舗プリセット表示
   var presetEl = document.getElementById('m-store-preset-text');
