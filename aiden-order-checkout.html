@@ -804,7 +804,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.style.pointerEvents = 'none';
 
   await loadCheckoutData();
-  mode = CHECKOUT_DATA.orderMode || 'delivery'; // sessionStorageから取得した値を反映
+  mode = CHECKOUT_DATA.orderMode || 'delivery';
+
+  // Guard: redirect if cart is empty (direct access without items)
+  if (!CHECKOUT_DATA.cartItems || CHECKOUT_DATA.cartItems.length === 0) {
+    document.body.style.opacity = '';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:sans-serif;padding:20px"><div><div style="font-size:48px;margin-bottom:16px">\uD83D\uDED2</div><h2 style="margin-bottom:8px">カートに商品がありません</h2><p style="color:#636e72;font-size:14px">メニューから商品を選んでください。</p><a href="./aiden-order.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:#D32F2F;color:white;border-radius:8px;text-decoration:none;font-weight:700">注文ページへ戻る</a></div></div>';
+    return;
+  }
 
   document.body.style.opacity = '';
   document.body.style.pointerEvents = '';
