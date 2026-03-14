@@ -878,7 +878,7 @@ function openModal(catId, idx) {
     +'<div class="item-modal-tags">'+buildTagsHtml(item.tags,item.discount)+'</div>'
     +'<div class="item-modal-name">'+t(item.nameKey)+'</div>'
     +'<div class="item-modal-outline">'+t(item.outlineKey)+'</div>'
-    +'<div class="item-modal-desc">'+t(item.detailKey)+'</div>'
+    +'<div class="item-modal-desc"'+(t(item.detailKey)?'':' style="display:none"')+'>'+t(item.detailKey)+'</div>'
     +'<div class="item-modal-price">'+priceHtml+'</div>'
     +'<div class="item-modal-allergen"><strong>'+t('allergen_label')+'：</strong>'+allergens+'</div>'
     +courseNote+'</div>';
@@ -905,10 +905,12 @@ function setActive(id) {
 }
 window.addEventListener('scroll', function() {
   var scroll = window.scrollY + 100;
+  var activeId = null;
   MENU_DATA.slice().sort(function(a,b){return a.order-b.order;}).forEach(function(cat) {
     var el = document.getElementById('cat-'+cat.id);
-    if (el && el.offsetTop <= scroll && el.offsetTop + el.offsetHeight > scroll) setActive(cat.id);
+    if (el && el.offsetTop <= scroll) activeId = cat.id;
   });
+  if (activeId) setActive(activeId);
 });
 
 function changeLang(lang) {
@@ -958,7 +960,7 @@ async function loadMenuFromSupabase() {
   MENU_DATA = cats.map(function(c, ci) {
     var catProducts = products.filter(function(p) { return p.category_id === c.id; });
     return {
-      id: c.id, labelKey: 'cat_' + ci, icon: '🥩', order: c.sort_order || ci + 1,
+      id: c.id, labelKey: c.name, icon: '🥩', order: c.sort_order || ci + 1,
       items: catProducts.map(function(p) {
         var sz = (sizes || []).filter(function(s) { return s.product_id === p.id; }).sort(function(a,b) { return a.sort_order - b.sort_order; });
         var price = sz.length > 0 ? sz[0].price : 0;
