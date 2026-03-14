@@ -382,9 +382,9 @@ img { max-width:100%; display:block; }
 .modal-overlay {
   display:none; position:fixed; inset:0; z-index:200;
   background:rgba(0,0,0,.5); align-items:center; justify-content:center;
-  animation:fadeIn .2s;
+  animation:fadeIn .2s; pointer-events:none;
 }
-.modal-overlay.show { display:flex; }
+.modal-overlay.show { display:flex; pointer-events:auto; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
 
@@ -1024,17 +1024,8 @@ let STORE_DATA = {
   freeDeliveryLabel: '送料無料',
 };
 
-// Current order mode (passed from aiden-order via sessionStorage)
+// Current order mode (passed from aiden-order-v17)
 let orderMode = 'delivery'; // 'takeout' or 'delivery'
-try {
-  const savedStore = sessionStorage.getItem('aiden_selected_store');
-  if (savedStore) {
-    const parsed = JSON.parse(savedStore);
-    if (parsed.orderMode === 'takeout' || parsed.orderMode === 'delivery') {
-      orderMode = parsed.orderMode;
-    }
-  }
-} catch(e) { /* ignored */ }
 let userAddress = ''; // entered address text
 let userLat = null;
 let userLng = null;
