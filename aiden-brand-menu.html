@@ -944,19 +944,48 @@ function toggleNav() {
   nav.classList.toggle('open');
   document.getElementById('hamburger').textContent = nav.classList.contains('open') ? '✕' : '☰';
 }
-// ===== SUPABASE =====
+// ===== API CONFIG =====
+const API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+const BRAND_ID = '22222222-0000-0000-0000-000000000001';
+
+async function apiFetch(path) {
+  var res = await fetch(API_BASE + path, { headers: { 'Content-Type': 'application/json' } });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Supabase fallback
 const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
-const BRAND_ID = '22222222-0000-0000-0000-000000000001';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function loadMenuFromSupabase() {
+  // Try API first
+  if (API_BASE) {
+    try {
+      var data = await apiFetch('/api/menu/products?brand_id=' + BRAND_ID);
+      if (data && data.categories && data.products) {
+        MENU_DATA = data.categories.map(function(c, ci) {
+          var catProds = data.products.filter(function(p) { return p.category_id === c.id; });
+          return {
+            id: c.id, labelKey: c.name, icon: '🥩', order: c.sort_order || ci + 1,
+            items: catProds.map(function(p) {
+              var sz = (p.product_sizes || []).sort(function(a,b) { return (a.sort_order||0) - (b.sort_order||0); });
+              var price = sz.length > 0 ? sz[0].price : (p.price || 0);
+              return { nameKey: p.name, outlineKey: p.description || '', detailKey: '', price: price, tags: [], allergens: [], emoji: '🥩', bg: 'linear-gradient(135deg,#2d1f0a,#8b6914)', _directName: true };
+            })
+          };
+        });
+        return;
+      }
+    } catch(e) { /* fall through */ }
+  }
+
+  // Supabase fallback
   var {data: cats} = await sb.from('categories').select('*').eq('brand_id', BRAND_ID).order('sort_order');
   var {data: products} = await sb.from('products').select('*').eq('brand_id', BRAND_ID);
   var {data: sizes} = await sb.from('product_sizes').select('*');
   if (!cats || !products) return;
-  var catMap = {};
-  cats.forEach(function(c) { catMap[c.id] = c; });
   MENU_DATA = cats.map(function(c, ci) {
     var catProducts = products.filter(function(p) { return p.category_id === c.id; });
     return {

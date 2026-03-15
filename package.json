@@ -2,7 +2,7 @@
   "name": "aiden-demo",
   "version": "1.0.0",
   "private": true,
-  "devDependencies": {
+  "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "stripe": "^17.5.0"
   }

@@ -986,7 +986,38 @@ var BRAND = {primaryColor:'#D32F2F', primaryDark:'#B71C1C'};
 })();
 
 /* ============================================================
-   STORES — aiden-brand-stores.html と同期
+   API CONFIG
+   ============================================================ */
+var API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+
+async function loadStoresFromAPI() {
+  if (!API_BASE) return;
+  try {
+    var res = await fetch(API_BASE + '/api/restaurants/stores', { headers: { 'Content-Type': 'application/json' } });
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.stores && data.stores.length > 0) {
+      STORES = data.stores.map(function(s) {
+        var svcs = s.services || [];
+        return {
+          id: s.slug || s.id,
+          name: s.name,
+          addr: s.address || '',
+          station: '',
+          hours: '',
+          avail: s.is_active ? 'ok' : 'full',
+          hasTakeout: svcs.indexOf('mo_takeout') >= 0,
+          hasDelivery: svcs.indexOf('mo_delivery') >= 0,
+          lat: s.lat || 0,
+          lng: s.lng || 0
+        };
+      });
+    }
+  } catch(e) { /* use fallback STORES */ }
+}
+
+/* ============================================================
+   STORES — fallback demo data
    avail: "ok"|"few" = 注文可, "full" = 受付停止
    ============================================================ */
 var STORES = [
@@ -2480,6 +2511,10 @@ var toastTimer=null;
 /* =====================================================
    INIT
    ===================================================== */
+(async function() {
+  await loadStoresFromAPI();
+  renderStoreList();
+})();
 
 </script>
 </body>

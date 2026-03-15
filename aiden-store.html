@@ -1015,48 +1015,98 @@ var GENRES = {
 /* =====================================================
    INIT
    ===================================================== */
-// ===== SUPABASE =====
+// ===== API CONFIG =====
+const API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+const STORE_SLUG = 'sumibite-shibuya';
+
+async function apiFetch(path) {
+  const token = localStorage.getItem('aiden_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { headers });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Supabase fallback
 const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
-const STORE_SLUG = 'sumibite-shibuya';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function loadStoreFromSupabase() {
+  // Try API first
+  if (API_BASE) {
+    try {
+      var apiStore = await apiFetch('/api/restaurants/stores/' + STORE_SLUG);
+      if (apiStore) {
+        STORE.name = apiStore.name;
+        STORE.address = apiStore.address || STORE.address;
+        STORE.phone = apiStore.phone || STORE.phone;
+        if (apiStore.seat_only_reservation != null) STORE.seatOnlyReservation = apiStore.seat_only_reservation;
+        if (apiStore.cancel_no_show != null) STORE.cancel.cancelNoShow = apiStore.cancel_no_show;
+        if (apiStore.cancel_same_day != null) STORE.cancel.cancelSameDay = apiStore.cancel_same_day;
+        if (apiStore.cancel_3days != null) STORE.cancel.cancel3days = apiStore.cancel_3days;
+
+        // Media
+        if (apiStore.media) {
+          var gallery = apiStore.media.filter(function(m){ return m.media_type === 'store_gallery'; });
+          var staff = apiStore.media.filter(function(m){ return m.media_type === 'store_staff'; });
+          if (gallery.length > 0) {
+            STORE.galleryMedia = gallery.map(function(m){ return {type: m.is_video ? 'video' : 'image', imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
+            STORE.photoMedia = gallery.map(function(m){ return {imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
+          }
+          if (staff.length > 0) STORE._staffFromDB = staff;
+        }
+
+        // Services
+        var svcKeys = apiStore.services || [];
+        STORE.hasTakeout = svcKeys.indexOf('mo_takeout') >= 0;
+        STORE.hasDelivery = svcKeys.indexOf('mo_delivery') >= 0;
+
+        // Menu via API
+        var menuData = await apiFetch('/api/menu/products?brand_id=' + (apiStore.brand_id || ''));
+        if (menuData && menuData.categories && menuData.products) {
+          var newMenu = menuData.categories.map(function(c) {
+            var catProds = menuData.products.filter(function(p) { return p.category_id === c.id; });
+            return { category: c.name, isCourse: false, items: catProds.map(function(p) {
+              var sz = (p.product_sizes || []).sort(function(a,b) { return (a.sort_order||0) - (b.sort_order||0); });
+              return { name: p.name, price: sz.length > 0 ? sz[0].price : (p.price || 0), priceUnit: '', outline: p.description || '', recommended: false, emoji: '🥩', bg: 'linear-gradient(135deg,#2d1f0a,#8b6914)' };
+            })};
+          }).filter(function(c) { return c.items.length > 0; });
+          if (newMenu.length > 0) MENU = newMenu;
+        }
+        return;
+      }
+    } catch(e) { /* fall through to Supabase */ }
+  }
+
+  // Supabase fallback
   var {data: storeData} = await sb.from('stores').select('*').eq('slug', STORE_SLUG).single();
   if (!storeData) return;
   STORE.name = storeData.name;
   STORE.address = storeData.address || STORE.address;
   STORE.phone = storeData.phone || STORE.phone;
-
-  // Flags
-  if (storeData.seat_only_reservation !== null && storeData.seat_only_reservation !== undefined) STORE.seatOnlyReservation = storeData.seat_only_reservation;
-  if (storeData.has_takeout !== null && storeData.has_takeout !== undefined) STORE.hasTakeout = storeData.has_takeout;
-  if (storeData.has_delivery !== null && storeData.has_delivery !== undefined) STORE.hasDelivery = storeData.has_delivery;
-
-  // Cancel policy
-  if (storeData.cancel_no_show !== null) STORE.cancel.cancelNoShow = storeData.cancel_no_show;
-  if (storeData.cancel_same_day !== null) STORE.cancel.cancelSameDay = storeData.cancel_same_day;
-  if (storeData.cancel_3days !== null) STORE.cancel.cancel3days = storeData.cancel_3days;
+  if (storeData.seat_only_reservation != null) STORE.seatOnlyReservation = storeData.seat_only_reservation;
+  if (storeData.has_takeout != null) STORE.hasTakeout = storeData.has_takeout;
+  if (storeData.has_delivery != null) STORE.hasDelivery = storeData.has_delivery;
+  if (storeData.cancel_no_show != null) STORE.cancel.cancelNoShow = storeData.cancel_no_show;
+  if (storeData.cancel_same_day != null) STORE.cancel.cancelSameDay = storeData.cancel_same_day;
+  if (storeData.cancel_3days != null) STORE.cancel.cancel3days = storeData.cancel_3days;
 
   var {data: cats} = await sb.from('categories').select('*').eq('brand_id', storeData.brand_id).order('sort_order');
   var {data: products} = await sb.from('products').select('*').eq('brand_id', storeData.brand_id);
   var {data: sizes} = await sb.from('product_sizes').select('*');
   if (cats && products) {
-    var catMap = {}; cats.forEach(function(c) { catMap[c.id] = c.name; });
     var newMenu = cats.map(function(c) {
       var catProds = products.filter(function(p) { return p.category_id === c.id; });
-      return {
-        category: c.name, isCourse: false,
-        items: catProds.map(function(p) {
-          var sz = (sizes || []).filter(function(s) { return s.product_id === p.id; }).sort(function(a,b) { return a.sort_order - b.sort_order; });
-          return { name: p.name, price: sz.length > 0 ? sz[0].price : 0, priceUnit: '', outline: p.description || '', recommended: false, emoji: '🥩', bg: 'linear-gradient(135deg,#2d1f0a,#8b6914)' };
-        })
-      };
+      return { category: c.name, isCourse: false, items: catProds.map(function(p) {
+        var sz = (sizes || []).filter(function(s) { return s.product_id === p.id; }).sort(function(a,b) { return a.sort_order - b.sort_order; });
+        return { name: p.name, price: sz.length > 0 ? sz[0].price : 0, priceUnit: '', outline: p.description || '', recommended: false, emoji: '🥩', bg: 'linear-gradient(135deg,#2d1f0a,#8b6914)' };
+      })};
     }).filter(function(c) { return c.items.length > 0; });
     if (newMenu.length > 0) MENU = newMenu;
   }
 
-  // Load media (gallery + staff)
   var {data: mediaRows} = await sb.from('media').select('*').eq('entity_type', 'store').eq('entity_id', storeData.id).order('sort_order');
   if (mediaRows && mediaRows.length > 0) {
     var gallery = mediaRows.filter(function(m){ return m.media_type === 'store_gallery'; });
@@ -1065,12 +1115,9 @@ async function loadStoreFromSupabase() {
       STORE.galleryMedia = gallery.map(function(m){ return {type: m.is_video ? 'video' : 'image', imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
       STORE.photoMedia = gallery.map(function(m){ return {imgUrl: m.url, emoji: '', bg: '', isVideo: m.is_video}; });
     }
-    if (staff.length > 0) {
-      STORE._staffFromDB = staff;
-    }
+    if (staff.length > 0) STORE._staffFromDB = staff;
   }
 
-  // Load service subscriptions for this store
   var {data: svcRows} = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'store').eq('entity_id', storeData.id).eq('is_active', true);
   if (svcRows) {
     var svcKeys = svcRows.map(function(r){ return r.service_key; });

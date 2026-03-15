@@ -173,8 +173,20 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);min
 
 <script>
 // ===================================================================
-// SUPABASE CONFIG
+// API CONFIG
 // ===================================================================
+const API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+
+async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem('aiden_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { ...options, headers });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Supabase fallback
 const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -233,16 +245,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    const { data: order, error } = await sb
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('display_id', orderId)
-      .eq('tracking_token', token)
-      .single();
+    let order = null;
 
-    if (error || !order) {
-      showError('注文が見つかりません', 'URLが正しいかご確認ください。');
-      return;
+    // Try API first
+    if (API_BASE) {
+      try {
+        order = await apiFetch('/api/orders/' + orderId + '?tracking_token=' + encodeURIComponent(token));
+      } catch(e) { /* fall through to Supabase */ }
+    }
+
+    // Supabase fallback
+    if (!order) {
+      const { data, error } = await sb
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('display_id', orderId)
+        .eq('tracking_token', token)
+        .single();
+
+      if (error || !data) {
+        showError('注文が見つかりません', 'URLが正しいかご確認ください。');
+        return;
+      }
+      order = data;
     }
 
     if (order.tracking_expires_at && new Date(order.tracking_expires_at) < new Date()) {
@@ -252,11 +277,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     orderData = order;
 
-    const { data: store } = await sb
-      .from('stores')
-      .select('*, brands(id, name, primary_color, slug)')
-      .eq('id', order.store_id)
-      .single();
+    // Load store info
+    let store = null;
+    if (API_BASE && order.store_id) {
+      try {
+        store = await apiFetch('/api/restaurants/stores/' + order.store_id);
+      } catch(e) { /* fall through */ }
+    }
+    if (!store && order.store_id) {
+      const { data } = await sb
+        .from('stores')
+        .select('*, brands(id, name, primary_color, slug)')
+        .eq('id', order.store_id)
+        .single();
+      store = data;
+    }
 
     if (store) {
       storeData = store;
@@ -424,11 +459,30 @@ function startPolling() {
   const cur = orderData.tracking_status || 'placed';
   if (FINAL_STATUSES.includes(cur) || cur==='cancelled') return;
 
+  const params = new URLSearchParams(window.location.search);
+  const pollToken = params.get('token');
+  const pollOrderId = params.get('order');
+
   pollInterval = setInterval(async () => {
     try {
-      const { data } = await sb.from('orders')
-        .select('tracking_status, estimated_delivery_at, delivery_lat, delivery_lng')
-        .eq('id', orderData.id).single();
+      let data = null;
+
+      // Try API first
+      if (API_BASE && pollOrderId && pollToken) {
+        try {
+          const res = await apiFetch('/api/orders/' + pollOrderId + '?tracking_token=' + encodeURIComponent(pollToken));
+          data = res;
+        } catch(e) { /* fall through */ }
+      }
+
+      // Supabase fallback
+      if (!data) {
+        const { data: sbData } = await sb.from('orders')
+          .select('tracking_status, estimated_delivery_at, delivery_lat, delivery_lng')
+          .eq('id', orderData.id).single();
+        data = sbData;
+      }
+
       if (data) {
         const changed = data.tracking_status !== orderData.tracking_status;
         Object.assign(orderData, data);

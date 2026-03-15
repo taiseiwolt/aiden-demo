@@ -951,11 +951,23 @@ img { max-width:100%; display:block; }
 
 <script>
 // ===================================================================
-// SUPABASE CONFIG
+// API CONFIG
 // ===================================================================
+const API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+const STORE_SLUG = 'sumibite-shibuya';
+
+async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem('aiden_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { ...options, headers });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Supabase fallback (used when API is not yet deployed)
 const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
-const STORE_SLUG   = 'sumibite-shibuya';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ===================================================================
@@ -1254,154 +1266,115 @@ let prodOptionState = {};
 // ===================================================================
 async function loadFromSupabase() {
   try {
-    // 1. 店舗情報取得
-    const { data: storeRows } = await sb
-      .from('stores')
-      .select('*, brands(id, name)')
-      .eq('slug', STORE_SLUG)
-      .single();
+    // === Try API first, fall back to direct Supabase ===
+    let storeData, menuData;
+    let useApi = !!API_BASE;
 
-    if (!storeRows) return; // データなければフォールバックのまま
+    if (useApi) {
+      try {
+        [storeData, menuData] = await Promise.all([
+          apiFetch('/api/restaurants/stores/' + STORE_SLUG),
+          null, // store_id needed first
+        ]);
+      } catch(e) { useApi = false; }
+    }
 
-    // 2. 営業時間取得
-    const { data: hoursRows } = await sb
-      .from('store_hours')
-      .select('*')
-      .eq('store_id', storeRows.id)
-      .order('day_of_week');
+    if (useApi && storeData) {
+      // API mode: parse store response
+      const s = storeData;
+      const DAYS = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+      const hoursFormatted = (s.store_hours || [])
+        .filter(h => !h.is_closed)
+        .map(h => ({ day: DAYS[h.day_of_week], time: h.open_time.slice(0,5) + '–' + h.close_time.slice(0,5) }));
 
+      STORE_DATA = {
+        ...STORE_DATA,
+        brandName: s.brands?.name || STORE_DATA.brandName,
+        storeName: s.name,
+        address: s.address || STORE_DATA.address,
+        phone: s.phone || STORE_DATA.phone,
+        lat: s.lat || STORE_DATA.lat,
+        lng: s.lng || STORE_DATA.lng,
+        hours: hoursFormatted.length ? hoursFormatted : STORE_DATA.hours,
+        deliveryHours: hoursFormatted.length ? hoursFormatted : STORE_DATA.deliveryHours,
+        deliveryRadiusKm: s.delivery_radius_km ?? STORE_DATA.deliveryRadiusKm,
+        deliveryFee: s.delivery_fee ?? STORE_DATA.deliveryFee,
+        minOrderAmount: s.min_order_amount ?? STORE_DATA.minOrderAmount,
+        deliveryTimeMin: s.delivery_time_min ?? STORE_DATA.deliveryTimeMin,
+        deliveryTimeMax: s.delivery_time_max ?? STORE_DATA.deliveryTimeMax,
+        smallOrderSurchargeMax: s.small_order_surcharge_max ?? STORE_DATA.smallOrderSurchargeMax,
+        minOrderPolicy: s.min_order_policy || STORE_DATA.minOrderPolicy,
+        freeDeliveryThreshold: s.free_delivery_threshold ?? STORE_DATA.freeDeliveryThreshold,
+        storeRequestEnabled: s.store_request_enabled ?? STORE_DATA.storeRequestEnabled,
+      };
+
+      // Hero image from media
+      const heroMedia = (s.media || []).find(m => m.media_type === 'store_hero');
+      if (heroMedia) STORE_DATA.storeHeroImg = heroMedia.url;
+
+      // Services
+      STORE_DATA._enabledServices = s.services || [];
+
+      // Menu data via API
+      try {
+        menuData = await apiFetch('/api/menu/products?store_id=' + s.id);
+      } catch(e) { /* fall through */ }
+
+      if (menuData) {
+        CATEGORIES = (menuData.categories || []).map(c => ({ id: c.id, name: c.name, emoji: '', desc: '' }));
+        ITEMS = (menuData.products || []).map(p => {
+          const sizes = (p.product_sizes || []).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+          const defaultSize = sizes.find(sz => sz.name === 'default') || sizes[0];
+          const basePrice = defaultSize ? defaultSize.price : (p.price || 0);
+          const optGroups = (p.option_groups || []).map(og => {
+            if (!og) return null;
+            const choices = (og.option_items || []).sort((a,b) => (a.sort_order||0) - (b.sort_order||0)).map(oi => ({
+              name: oi.price_adjustment > 0 ? oi.name + '（+¥' + oi.price_adjustment + '）' : oi.price_adjustment < 0 ? oi.name + '（−¥' + Math.abs(oi.price_adjustment) + '）' : oi.name,
+              price: oi.price_adjustment || 0,
+              default: oi.is_default
+            }));
+            return { id: og.id, title: og.name, type: og.type, required: og.is_required, choices };
+          }).filter(Boolean);
+          return { id: p.id, cat: p.category_id, name: p.name, desc: p.description || '', price: basePrice, img: p.image_url || '', tags: p.tags || [], options: optGroups.length > 0 ? optGroups : undefined };
+        });
+      }
+      return;
+    }
+
+    // === Fallback: Direct Supabase ===
+    const { data: storeRows } = await sb.from('stores').select('*, brands(id, name)').eq('slug', STORE_SLUG).single();
+    if (!storeRows) return;
+
+    const { data: hoursRows } = await sb.from('store_hours').select('*').eq('store_id', storeRows.id).order('day_of_week');
     const DAYS = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
-    const hoursFormatted = (hoursRows || [])
-      .filter(h => !h.is_closed)
-      .map(h => ({
-        day: DAYS[h.day_of_week],
-        time: h.open_time.slice(0,5) + '–' + h.close_time.slice(0,5)
-      }));
+    const hoursFormatted = (hoursRows || []).filter(h => !h.is_closed).map(h => ({ day: DAYS[h.day_of_week], time: h.open_time.slice(0,5) + '–' + h.close_time.slice(0,5) }));
 
-    // 3. STORE_DATA を上書き（固定設定値は既存のまま保持）
-    STORE_DATA = {
-      ...STORE_DATA,
-      brandName:    storeRows.brands?.name || STORE_DATA.brandName,
-      storeName:    storeRows.name,
-      address:      storeRows.address || STORE_DATA.address,
-      phone:        storeRows.phone   || STORE_DATA.phone,
-      lat:          storeRows.lat     || STORE_DATA.lat,
-      lng:          storeRows.lng     || STORE_DATA.lng,
-      hours:        hoursFormatted.length ? hoursFormatted : STORE_DATA.hours,
-      deliveryHours: hoursFormatted.length ? hoursFormatted : STORE_DATA.deliveryHours,
-      // Delivery settings
-      deliveryRadiusKm:      storeRows.delivery_radius_km    ?? STORE_DATA.deliveryRadiusKm,
-      deliveryFee:           storeRows.delivery_fee           ?? STORE_DATA.deliveryFee,
-      minOrderAmount:        storeRows.min_order_amount       ?? STORE_DATA.minOrderAmount,
-      deliveryTimeMin:       storeRows.delivery_time_min      ?? STORE_DATA.deliveryTimeMin,
-      deliveryTimeMax:       storeRows.delivery_time_max      ?? STORE_DATA.deliveryTimeMax,
-      smallOrderSurchargeMax: storeRows.small_order_surcharge_max ?? STORE_DATA.smallOrderSurchargeMax,
-      minOrderPolicy:        storeRows.min_order_policy       || STORE_DATA.minOrderPolicy,
-      freeDeliveryThreshold: storeRows.free_delivery_threshold ?? STORE_DATA.freeDeliveryThreshold,
-      // Flags
-      storeRequestEnabled:   storeRows.store_request_enabled  ?? STORE_DATA.storeRequestEnabled,
-    };
+    STORE_DATA = { ...STORE_DATA, brandName: storeRows.brands?.name || STORE_DATA.brandName, storeName: storeRows.name, address: storeRows.address || STORE_DATA.address, phone: storeRows.phone || STORE_DATA.phone, lat: storeRows.lat || STORE_DATA.lat, lng: storeRows.lng || STORE_DATA.lng, hours: hoursFormatted.length ? hoursFormatted : STORE_DATA.hours, deliveryHours: hoursFormatted.length ? hoursFormatted : STORE_DATA.deliveryHours, deliveryRadiusKm: storeRows.delivery_radius_km ?? STORE_DATA.deliveryRadiusKm, deliveryFee: storeRows.delivery_fee ?? STORE_DATA.deliveryFee, minOrderAmount: storeRows.min_order_amount ?? STORE_DATA.minOrderAmount, deliveryTimeMin: storeRows.delivery_time_min ?? STORE_DATA.deliveryTimeMin, deliveryTimeMax: storeRows.delivery_time_max ?? STORE_DATA.deliveryTimeMax, smallOrderSurchargeMax: storeRows.small_order_surcharge_max ?? STORE_DATA.smallOrderSurchargeMax, minOrderPolicy: storeRows.min_order_policy || STORE_DATA.minOrderPolicy, freeDeliveryThreshold: storeRows.free_delivery_threshold ?? STORE_DATA.freeDeliveryThreshold, storeRequestEnabled: storeRows.store_request_enabled ?? STORE_DATA.storeRequestEnabled };
 
-    // 4. アクティブなメニューパターン取得
-    const { data: patternRows } = await sb
-      .from('menu_patterns')
-      .select('id')
-      .eq('store_id', storeRows.id)
-      .limit(1)
-      .single();
-
+    const { data: patternRows } = await sb.from('menu_patterns').select('id').eq('store_id', storeRows.id).limit(1).single();
     if (!patternRows) return;
 
-    // 5. パターンに紐づく商品・カテゴリ・オプション一括取得
-    const { data: itemRows } = await sb
-      .from('menu_pattern_items')
-      .select(`
-        status, sort_order,
-        categories(id, name, sort_order),
-        products(
-          id, name, description, image_url, tax_rate, dine_in, takeout, delivery,
-          product_sizes(id, name, price, sort_order),
-          product_option_groups(
-            sort_order,
-            option_groups(
-              id, name, type, required, min_select, max_select,
-              option_items(id, name, price, is_default, sort_order)
-            )
-          )
-        )
-      `)
-      .eq('pattern_id', patternRows.id)
-      .eq('status', 'active')
-      .order('sort_order');
-
+    const { data: itemRows } = await sb.from('menu_pattern_items').select('status, sort_order, categories(id, name, sort_order), products(id, name, description, image_url, tax_rate, dine_in, takeout, delivery, product_sizes(id, name, price, sort_order), product_option_groups(sort_order, option_groups(id, name, type, required, min_select, max_select, option_items(id, name, price, is_default, sort_order))))').eq('pattern_id', patternRows.id).eq('status', 'active').order('sort_order');
     if (!itemRows || itemRows.length === 0) return;
 
-    // 6. CATEGORIES を再構築（重複排除・順番保持）
     const catMap = new Map();
-    itemRows.forEach(row => {
-      const c = row.categories;
-      if (c && !catMap.has(c.id)) {
-        catMap.set(c.id, { id: c.id, name: c.name, emoji: '', desc: '' });
-      }
-    });
+    itemRows.forEach(row => { const c = row.categories; if (c && !catMap.has(c.id)) catMap.set(c.id, { id: c.id, name: c.name, emoji: '', desc: '' }); });
     CATEGORIES = Array.from(catMap.values());
 
-    // 7. ITEMS を再構築
     ITEMS = itemRows.map(row => {
-      const p = row.products;
-      if (!p) return null;
-
-      // 価格（default or 最安値サイズ）
+      const p = row.products; if (!p) return null;
       const sizes = (p.product_sizes || []).sort((a,b) => a.sort_order - b.sort_order);
       const defaultSize = sizes.find(s => s.name === 'default') || sizes[0];
       const basePrice = defaultSize ? defaultSize.price : 0;
-
-      // オプション
-      const optGroups = (p.product_option_groups || [])
-        .sort((a,b) => a.sort_order - b.sort_order)
-        .map(pg => {
-          const og = pg.option_groups;
-          if (!og) return null;
-          const choices = (og.option_items || [])
-            .sort((a,b) => a.sort_order - b.sort_order)
-            .map(oi => ({
-              name:    oi.price > 0 ? `${oi.name}（+¥${oi.price}）` :
-                       oi.price < 0 ? `${oi.name}（−¥${Math.abs(oi.price)}）` : oi.name,
-              price:   oi.price,
-              default: oi.is_default
-            }));
-          return {
-            id:       og.id,
-            title:    og.name,
-            type:     og.type,     // radio / checkbox / counter
-            required: og.required,
-            choices
-          };
-        }).filter(Boolean);
-
-      return {
-        id:      p.id,
-        cat:     row.categories?.id,
-        name:    p.name,
-        desc:    p.description || '',
-        price:   basePrice,
-        img:     p.image_url || '',
-        tags:    [],
-        options: optGroups.length > 0 ? optGroups : undefined
-      };
+      const optGroups = (p.product_option_groups || []).sort((a,b) => a.sort_order - b.sort_order).map(pg => { const og = pg.option_groups; if (!og) return null; const choices = (og.option_items || []).sort((a,b) => a.sort_order - b.sort_order).map(oi => ({ name: oi.price > 0 ? oi.name + '（+¥' + oi.price + '）' : oi.price < 0 ? oi.name + '（−¥' + Math.abs(oi.price) + '）' : oi.name, price: oi.price, default: oi.is_default })); return { id: og.id, title: og.name, type: og.type, required: og.required, choices }; }).filter(Boolean);
+      return { id: p.id, cat: row.categories?.id, name: p.name, desc: p.description || '', price: basePrice, img: p.image_url || '', tags: [], options: optGroups.length > 0 ? optGroups : undefined };
     }).filter(Boolean);
 
-    // 8. Load store hero image from media
     var { data: heroMedia } = await sb.from('media').select('url').eq('entity_type', 'store').eq('entity_id', storeRows.id).eq('media_type', 'store_hero').limit(1);
-    if (heroMedia && heroMedia.length > 0) {
-      STORE_DATA.storeHeroImg = heroMedia[0].url;
-    }
+    if (heroMedia && heroMedia.length > 0) STORE_DATA.storeHeroImg = heroMedia[0].url;
 
-    // 9. Load service subscriptions for this store
     var { data: svcRows } = await sb.from('service_subscriptions').select('service_key').eq('entity_type', 'store').eq('entity_id', storeRows.id).eq('is_active', true);
-    if (svcRows) {
-      STORE_DATA._enabledServices = svcRows.map(r => r.service_key);
-    }
+    if (svcRows) STORE_DATA._enabledServices = svcRows.map(r => r.service_key);
 
   } catch(e) {
   }

@@ -544,10 +544,23 @@ body{font-family:'Noto Sans JP',sans-serif;overflow:hidden;height:100vh;backgrou
 <div class="toast" id="toast"></div>
 
 <script>
-// ===== SUPABASE CONFIG =====
+// ===== API CONFIG =====
+const API_BASE = 'https://aiden-demo.vercel.app'; // Vercel production domain
+const STORE_SLUG = 'sumibite-shibuya';
+let STORE_ID = null; // Set after initial load
+
+async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem('aiden_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { ...options, headers });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Supabase fallback
 const SUPABASE_URL = 'https://iikwusprydaogzeslgdz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oiOC8uI-wOTexg-02toAOQ_3MXBt8lC';
-const STORE_SLUG = 'sumibite-shibuya';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Channel mapping: Supabase value -> display name
@@ -595,12 +608,80 @@ const nc=()=>O.filter(o=>o.s==="new").length;
 function chHtml(ch){const src=LOGOS[ch];const r=ch==='Wolt';const d=ch==='出前館';if(src)return'<div class="ch-logo-wrap"><img class="ch-logo'+(r?' round':'')+'" style="height:'+(d?'14px':'20px')+'" src="'+src+'" alt="'+ch+'"></div>';return'<span style="font-size:10px;color:#999">'+ch+'</span>';}
 function chHtmlPopup(ch){const src=LOGOS[ch];const d=ch==='出前館';if(src)return'<span class="p-tag"><img src="'+src+'" style="height:'+(d?'10px':'14px')+'"> '+ch+'</span>';return'<span class="p-tag">'+ch+'</span>';}
 
-// ===== SUPABASE DATA LOADER =====
+// ===== DATA LOADER (API first, Supabase fallback) =====
+function mapOrderStatus(s) {
+  // Map API/Supabase statuses to dashboard statuses
+  if (s === 'pending' || s === 'placed') return 'new';
+  if (s === 'confirmed' || s === 'preparing') return 'cooking';
+  if (s === 'prepared') return 'ready';
+  if (s === 'delivered' || s === 'picked_up') return 'done';
+  if (s === 'cancelled') return 'cancelled';
+  return s; // pass through if already in dashboard format
+}
+
+function mapOrderType(t) {
+  if (t === 'dinein' || t === 'dine_in') return 'dine';
+  if (t === 'pickup' || t === 'takeout') return 'takeout';
+  if (t === 'delivery') return 'delivery';
+  return OT_MAP[t] || t || 'dine';
+}
+
+function buildDashboardOrder(ord, idx) {
+  const items = (ord.order_items || []).map(it => {
+    const prod = MENU.find(m => m.id === it.product_id);
+    return {n: it.product_name || (prod ? prod.name : '商品'), p: it.unit_price || 0, q: it.quantity || 1, cat: prod ? prod.cat : '', op: []};
+  });
+  const d = new Date(ord.created_at);
+  const ch = CH_MAP[ord.channel] || ord.channel || 'AIden';
+  const t = mapOrderType(ord.order_type);
+  return {
+    id: ord.display_id || String(1001 + idx).padStart(4, '0'),
+    dbId: ord.id, // actual DB UUID for API calls
+    date: d,
+    s: mapOrderStatus(ord.status || ord.tracking_status),
+    t, ch, items,
+    tot: ord.total_amount || items.reduce((s, it) => s + it.p * it.q, 0),
+    tm: fmtT(new Date(d.getTime() + (25 + Math.floor(Math.random() * 30)) * 6e4)),
+    phone: ord.customer_phone || `090-${String(Math.floor(Math.random() * 9000) + 1000)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+    cust: ord.customer_name || (ord.customer_last_name ? ord.customer_last_name + ' ' + (ord.customer_first_name || '') : ''),
+    note: ord.notes || '',
+    paymentStatus: ord.payment_status,
+  };
+}
+
+async function loadFromAPI() {
+  // 1. Get store info
+  const store = await apiFetch('/api/restaurants/stores/' + STORE_SLUG);
+  if (!store) throw new Error('Store not found');
+  STORE_ID = store.id;
+  document.querySelector('.store-name').textContent = store.name;
+
+  // 2. Load menu products
+  try {
+    const menuData = await apiFetch('/api/menu/products?store_id=' + STORE_ID);
+    if (menuData && menuData.products && menuData.products.length > 0) {
+      MENU = menuData.products.map(p => {
+        const sz = (p.product_sizes || p.sizes || [])[0];
+        return {id: p.id, name: p.name, price: sz ? sz.price : 0, cat: p.category_name || '', emoji: '🍣', avail: true};
+      });
+    }
+  } catch(e) { /* keep demo menu */ }
+
+  // 3. Load orders
+  const ordersData = await apiFetch('/api/orders/?store_id=' + STORE_ID);
+  const orders = ordersData.orders || ordersData || [];
+  if (!orders.length) throw new Error('No orders');
+
+  O = orders.map((ord, idx) => buildDashboardOrder(ord, idx));
+  O.sort((a, b) => b.date - a.date);
+  oCtr = 1000 + O.length;
+}
+
 async function loadFromSupabase() {
   // 1. Get store info
   const {data: storeData} = await sb.from('stores').select('id,name').eq('slug', STORE_SLUG).single();
   if (!storeData) throw new Error('Store not found');
-  const storeId = storeData.id;
+  STORE_ID = storeData.id;
   document.querySelector('.store-name').textContent = storeData.name;
 
   // 2. Load products + sizes for MENU
@@ -617,34 +698,11 @@ async function loadFromSupabase() {
   }
 
   // 3. Load orders with items
-  const {data: orders} = await sb.from('orders').select('*').eq('store_id', storeId).order('created_at', {ascending: false});
+  const {data: orders} = await sb.from('orders').select('*, order_items(*)').eq('store_id', STORE_ID).order('created_at', {ascending: false});
   if (!orders || orders.length === 0) throw new Error('No orders');
 
-  // 4. Load order_items for all orders
-  const orderIds = orders.map(o => o.id);
-  const {data: allItems} = await sb.from('order_items').select('*').in('order_id', orderIds);
-
-  // 5. Build order objects matching dashboard format
-  const names = ['田中太郎','佐藤花子','鈴木一郎','高橋美咲','渡辺健太','伊藤さくら','山本大輔','中村優子','小林誠','加藤真理'];
-  O = orders.map((ord, idx) => {
-    const items = (allItems || []).filter(it => it.order_id === ord.id).map(it => {
-      const prod = MENU.find(m => m.id === it.product_id);
-      return {n: prod ? prod.name : '商品', p: it.unit_price, q: it.quantity, cat: prod ? prod.cat : '', op: []};
-    });
-    const d = new Date(ord.created_at);
-    const ch = CH_MAP[ord.channel] || ord.channel;
-    const t = OT_MAP[ord.order_type] || ord.order_type || 'dine';
-    return {
-      id: String(1001 + idx).padStart(4, '0'),
-      date: d, s: ord.status === 'pending' ? 'new' : ord.status,
-      t, ch, items,
-      tot: ord.total_amount,
-      tm: fmtT(new Date(d.getTime() + (25 + Math.floor(Math.random() * 30)) * 6e4)),
-      phone: `090-${String(Math.floor(Math.random() * 9000) + 1000)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-      cust: names[idx % names.length],
-      note: ord.notes || ''
-    };
-  });
+  O = orders.map((ord, idx) => buildDashboardOrder(ord, idx));
+  O.sort((a, b) => b.date - a.date);
   oCtr = 1000 + O.length;
 }
 
@@ -748,7 +806,32 @@ function renderExpand(){
 }
 
 // ===== ACTIONS =====
-function doAction(id){const o=O.find(x=>x.id===id);if(!o)return;if(o.s==='new')o.s='cooking';else if(o.s==='cooking')o.s='ready';else if(o.s==='ready')o.s='done';rOrders();renderHistory();}
+const STATUS_NEXT_API = {new:'confirmed', cooking:'prepared', ready:'delivered'};
+
+async function doAction(id){
+  const o=O.find(x=>x.id===id);if(!o)return;
+  const prevStatus = o.s;
+
+  // Optimistic update
+  if(o.s==='new')o.s='cooking';else if(o.s==='cooking')o.s='ready';else if(o.s==='ready')o.s='done';
+  rOrders();renderHistory();
+
+  // Call API if available
+  if (API_BASE && o.dbId) {
+    const apiStatus = STATUS_NEXT_API[prevStatus];
+    if (apiStatus) {
+      try {
+        await apiFetch('/api/orders/' + o.dbId + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ status: apiStatus }),
+        });
+      } catch(e) {
+        console.error('Status update API error:', e);
+        // Don't revert — local state is still valid
+      }
+    }
+  }
+}
 
 // ===== DETAIL =====
 function openDetail(id){
@@ -805,10 +888,25 @@ function doPartialCancel(id){
   const checks=[...document.querySelectorAll('.cancel-items input:checked')];
   if(!checks.length)return alert('商品を選択');if(!document.getElementById('cReason').value)return alert('理由を選択');
   const o=O.find(x=>x.id===id);checks.map(c=>parseInt(c.value)).sort((a,b)=>b-a).forEach(i=>o.items.splice(i,1));
-  if(!o.items.length)o.s='cancelled';else o.tot=o.items.reduce((s,it)=>s+it.p*it.q,0);
+  if(!o.items.length){o.s='cancelled';callCancelAPI(o);}else o.tot=o.items.reduce((s,it)=>s+it.p*it.q,0);
   closeCancel();rOrders();renderHistory();
 }
-function doFullCancel(id){if(!document.getElementById('cReason').value)return alert('理由を選択');O.find(x=>x.id===id).s='cancelled';closeCancel();rOrders();renderHistory();}
+function doFullCancel(id){
+  if(!document.getElementById('cReason').value)return alert('理由を選択');
+  const o=O.find(x=>x.id===id);o.s='cancelled';
+  callCancelAPI(o);
+  closeCancel();rOrders();renderHistory();
+}
+
+async function callCancelAPI(o) {
+  if (!API_BASE || !o.dbId) return;
+  try {
+    await apiFetch('/api/orders/' + o.dbId + '/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ reason: document.getElementById('cReason')?.value || 'store_cancel' }),
+    });
+  } catch(e) { console.error('Cancel API error:', e); }
+}
 
 // ===== SIMULATE =====
 function simulateOrder(){
@@ -973,17 +1071,86 @@ document.querySelectorAll('.mini-filter').forEach(el=>el.addEventListener('click
 document.querySelectorAll('.htable th[data-s]').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.s;if(hSortKey===k)hSortDir*=-1;else{hSortKey=k;hSortDir=-1;}renderHistory();}));
 document.addEventListener('click',e=>{if(!e.target.closest('#ptgl')&&!e.target.closest('#pmenu'))document.getElementById('pmenu').classList.remove('open');});
 
+// ===== POLLING =====
+let pollTimer = null;
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      if (API_BASE && STORE_ID) {
+        const data = await apiFetch('/api/orders/?store_id=' + STORE_ID + '&status=pending,confirmed,preparing,prepared');
+        const activeOrders = (data.orders || data || []);
+        let hasNew = false;
+        activeOrders.forEach(ord => {
+          const existing = O.find(x => x.dbId === ord.id);
+          if (existing) {
+            // Update status if changed
+            const newStatus = mapOrderStatus(ord.status || ord.tracking_status);
+            if (existing.s !== newStatus) { existing.s = newStatus; hasNew = true; }
+          } else {
+            // New order
+            O.unshift(buildDashboardOrder(ord, O.length));
+            hasNew = true;
+          }
+        });
+        if (hasNew) { rOrders(); renderHistory(); }
+      } else if (STORE_ID) {
+        // Supabase fallback polling
+        const {data: orders} = await sb.from('orders')
+          .select('id, status, tracking_status, created_at, display_id')
+          .eq('store_id', STORE_ID)
+          .in('status', ['pending','confirmed','preparing','prepared'])
+          .order('created_at', {ascending: false});
+        if (orders) {
+          let hasNew = false;
+          orders.forEach(ord => {
+            const existing = O.find(x => x.dbId === ord.id);
+            if (existing) {
+              const newStatus = mapOrderStatus(ord.status || ord.tracking_status);
+              if (existing.s !== newStatus) { existing.s = newStatus; hasNew = true; }
+            }
+            // For truly new orders via Supabase, we'd need full data — skip for polling
+          });
+          if (hasNew) { rOrders(); renderHistory(); }
+        }
+      }
+    } catch(e) { console.error('Poll error:', e); }
+  }, 30000);
+}
+
 // ===== INIT =====
 (async function init() {
   document.querySelector('.main').style.opacity = '0.4';
-  try {
-    await loadFromSupabase();
-  } catch(e) {
+  let loaded = false;
+
+  // Try API first
+  if (API_BASE) {
+    try {
+      await loadFromAPI();
+      loaded = true;
+    } catch(e) { /* fall through */ }
+  }
+
+  // Supabase fallback
+  if (!loaded) {
+    try {
+      await loadFromSupabase();
+      loaded = true;
+    } catch(e) { /* fall through */ }
+  }
+
+  // Demo data fallback
+  if (!loaded) {
     genOrders();
   }
+
   document.querySelector('.main').style.opacity = '1';
   rNav();rHdr();rOrders();
   const today=new Date();document.getElementById('dTo').value=today.toISOString().split('T')[0];document.getElementById('dFrom').value=new Date(today.getTime()-7*864e5).toISOString().split('T')[0];
+
+  // Start 30s polling for new orders
+  startPolling();
 })();
 </script>
 </body>
