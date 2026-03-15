@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会員プログラム | AIden</title>
+<style>
+:root {
+  --primary: #D32F2F;
+  --primary-light: #FFEBEE;
+  --bg: #F5F5F5;
+  --card: #FFFFFF;
+  --text: #212121;
+  --text-sub: #757575;
+  --border: #E0E0E0;
+  --gold: #F9A825;
+  --gold-bg: #FFF8E1;
+  --silver: #90A4AE;
+  --silver-bg: #ECEFF1;
+  --bronze: #A1887F;
+  --bronze-bg: #EFEBE9;
+  --green: #2E7D32;
+  --green-bg: #E8F5E9;
+  --red: #C62828;
+  --red-bg: #FFEBEE;
+  --blue: #1565C0;
+  --blue-bg: #E3F2FD;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: "Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; background:var(--bg); color:var(--text); max-width:430px; margin:0 auto; min-height:100vh; padding-bottom:80px; }
+
+/* Header */
+.header { background:var(--primary); color:#fff; padding:16px 20px; position:sticky; top:0; z-index:10; }
+.header-title { font-size:16px; font-weight:700; }
+.header-brand { font-size:11px; opacity:.8; margin-top:2px; }
+
+/* Current Status Card */
+.status-card { background:linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); color:#fff; margin:16px; border-radius:16px; padding:24px 20px; position:relative; overflow:hidden; }
+.status-card::after { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:rgba(255,255,255,.08); border-radius:50%; }
+.status-rank { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.status-rank-icon { width:44px; height:44px; background:rgba(255,255,255,.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; }
+.status-rank-name { font-size:20px; font-weight:700; }
+.status-rank-label { font-size:11px; opacity:.8; }
+.status-points { display:flex; align-items:baseline; gap:6px; margin-bottom:20px; }
+.status-points-num { font-size:36px; font-weight:800; letter-spacing:-1px; }
+.status-points-unit { font-size:14px; opacity:.8; }
+.status-points-label { font-size:11px; opacity:.7; }
+
+/* Progress Bar */
+.progress-section { background:rgba(255,255,255,.15); border-radius:12px; padding:14px 16px; }
+.progress-label { display:flex; justify-content:space-between; font-size:11px; opacity:.9; margin-bottom:8px; }
+.progress-bar { height:8px; background:rgba(255,255,255,.2); border-radius:4px; overflow:hidden; }
+.progress-fill { height:100%; background:#FFD54F; border-radius:4px; transition:width .6s ease; }
+.progress-hint { font-size:10px; opacity:.7; margin-top:6px; text-align:right; }
+
+/* Section */
+.section { margin:0 16px 16px; }
+.section-title { font-size:14px; font-weight:700; padding:12px 0 8px; display:flex; align-items:center; gap:6px; }
+.section-title span { font-size:16px; }
+
+/* Card */
+.card { background:var(--card); border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+
+/* Point How-To */
+.how-to { padding:16px; }
+.how-to-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #F5F5F5; }
+.how-to-row:last-child { border-bottom:none; }
+.how-to-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.how-to-text h4 { font-size:13px; font-weight:700; margin-bottom:2px; }
+.how-to-text p { font-size:11px; color:var(--text-sub); line-height:1.5; }
+
+/* Rank Cards */
+.rank-list { padding:12px; display:flex; flex-direction:column; gap:10px; }
+.rank-card { border-radius:12px; padding:16px; position:relative; }
+.rank-card.current { border:2px solid var(--primary); }
+.rank-card.current::after { content:'現在のランク'; position:absolute; top:-1px; right:12px; background:var(--primary); color:#fff; font-size:9px; font-weight:700; padding:3px 10px; border-radius:0 0 8px 8px; }
+.rank-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.rank-icon { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.rank-name { font-size:15px; font-weight:700; }
+.rank-condition { font-size:11px; color:var(--text-sub); }
+.rank-benefits { margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,.06); }
+.rank-benefit { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-sub); padding:3px 0; }
+.rank-benefit::before { content:'✓'; color:var(--green); font-weight:700; font-size:12px; }
+
+/* Point History */
+.history-tabs { display:flex; border-bottom:1px solid var(--border); }
+.history-tab { flex:1; text-align:center; padding:10px; font-size:12px; font-weight:600; color:var(--text-sub); cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; }
+.history-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.history-list { padding:0 16px; }
+.history-item { display:flex; align-items:center; padding:14px 0; border-bottom:1px solid #F5F5F5; }
+.history-item:last-child { border-bottom:none; }
+.history-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-right:12px; }
+.history-dot.earn { background:var(--green); }
+.history-dot.use { background:var(--blue); }
+.history-dot.expire { background:var(--text-sub); }
+.history-info { flex:1; }
+.history-desc { font-size:12px; font-weight:600; }
+.history-date { font-size:10px; color:var(--text-sub); margin-top:2px; }
+.history-pts { font-size:14px; font-weight:700; text-align:right; }
+.history-pts.earn { color:var(--green); }
+.history-pts.use { color:var(--blue); }
+.history-pts.expire { color:var(--text-sub); text-decoration:line-through; }
+
+/* Expiry Warning */
+.expiry-warn { background:#FFF3E0; border:1px solid #FFE0B2; border-radius:10px; padding:12px 14px; margin:16px; display:flex; align-items:flex-start; gap:10px; }
+.expiry-warn-icon { font-size:18px; flex-shrink:0; }
+.expiry-warn-text { font-size:11px; color:#E65100; line-height:1.5; }
+.expiry-warn-text strong { font-weight:700; }
+
+/* Bottom Nav (placeholder) */
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:#fff; border-top:1px solid var(--border); display:flex; padding:8px 0 20px; z-index:10; }
+.nav-item { flex:1; text-align:center; font-size:9px; color:var(--text-sub); }
+.nav-item.active { color:var(--primary); }
+.nav-icon { font-size:20px; margin-bottom:2px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">会員プログラム</div>
+  <div class="header-brand">焼肉キング メンバーズ</div>
+</div>
+
+<!-- Expiry Warning -->
+<div class="expiry-warn">
+  <div class="expiry-warn-icon">⚠️</div>
+  <div class="expiry-warn-text"><strong>120pt</strong> が3月31日に失効します。お早めにご利用ください。</div>
+</div>
+
+<!-- Current Status -->
+<div class="status-card">
+  <div class="status-rank">
+    <div class="status-rank-icon">🥈</div>
+    <div>
+      <div class="status-rank-name">シルバー</div>
+      <div class="status-rank-label">現在のランク</div>
+    </div>
+  </div>
+  <div class="status-points-label">利用可能ポイント</div>
+  <div class="status-points">
+    <div class="status-points-num">1,280</div>
+    <div class="status-points-unit">pt</div>
+  </div>
+  <!-- Progress to next rank -->
+  <div class="progress-section">
+    <div class="progress-label">
+      <span>シルバー</span>
+      <span>ゴールドまで</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:65%"></div>
+    </div>
+    <div class="progress-hint">あと ¥17,500 で昇格</div>
+  </div>
+</div>
+
+<!-- How to earn & use points -->
+<div class="section">
+  <div class="section-title"><span>💡</span>ポイントの貯め方・使い方</div>
+  <div class="card">
+    <div class="how-to">
+      <div class="how-to-row">
+        <div class="how-to-icon" style="background:var(--green-bg)">🛒</div>
+        <div class="how-to-text">
+          <h4>注文で貯まる</h4>
+          <p>お会計100円ごとに1pt付与されます。</p>
+        </div>
+      </div>
+      <div class="how-to-row">
+        <div class="how-to-icon" style="background:var(--blue-bg)">💳</div>
+        <div class="how-to-text">
+          <h4>お会計で使える</h4>
+          <p>1pt = 1円として、次回のお会計から値引きできます。100pt以上からご利用いただけます。</p>
+        </div>
+      </div>
+      <div class="how-to-row">
+        <div class="how-to-icon" style="background:var(--red-bg)">⏰</div>
+        <div class="how-to-text">
+          <h4>有効期限</h4>
+          <p>ポイントの有効期限は付与日から12ヶ月です。期限を過ぎると自動的に失効します。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rank List -->
+<div class="section">
+  <div class="section-title"><span>🏆</span>ランク一覧</div>
+  <div class="card">
+    <div class="rank-list">
+      <!-- Gold -->
+      <div class="rank-card" style="background:var(--gold-bg)">
+        <div class="rank-header">
+          <div class="rank-icon" style="background:var(--gold)">🥇</div>
+          <div>
+            <div class="rank-name" style="color:#F57F17">ゴールド</div>
+            <div class="rank-condition">累計 ¥50,000 以上</div>
+          </div>
+        </div>
+        <div class="rank-benefits">
+          <div class="rank-benefit">ポイント付与率 2倍（100円=2pt）</div>
+          <div class="rank-benefit">毎月限定クーポン配布</div>
+          <div class="rank-benefit">デリバリー送料無料</div>
+        </div>
+      </div>
+      <!-- Silver (current) -->
+      <div class="rank-card current" style="background:var(--silver-bg)">
+        <div class="rank-header">
+          <div class="rank-icon" style="background:var(--silver)">🥈</div>
+          <div>
+            <div class="rank-name" style="color:#546E7A">シルバー</div>
+            <div class="rank-condition">累計 ¥10,000 以上</div>
+          </div>
+        </div>
+        <div class="rank-benefits">
+          <div class="rank-benefit">ポイント付与率 1.5倍（100円=1.5pt）</div>
+          <div class="rank-benefit">誕生日クーポン配布</div>
+        </div>
+      </div>
+      <!-- Bronze -->
+      <div class="rank-card" style="background:var(--bronze-bg)">
+        <div class="rank-header">
+          <div class="rank-icon" style="background:var(--bronze)">🥉</div>
+          <div>
+            <div class="rank-name" style="color:#6D4C41">ブロンズ</div>
+            <div class="rank-condition">会員登録で自動付与</div>
+          </div>
+        </div>
+        <div class="rank-benefits">
+          <div class="rank-benefit">ポイント付与率 1倍（100円=1pt）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Point History -->
+<div class="section">
+  <div class="section-title"><span>📋</span>ポイント履歴</div>
+  <div class="card">
+    <div class="history-tabs">
+      <div class="history-tab active" onclick="switchHistory(this,'all')">すべて</div>
+      <div class="history-tab" onclick="switchHistory(this,'earn')">付与</div>
+      <div class="history-tab" onclick="switchHistory(this,'use')">利用</div>
+      <div class="history-tab" onclick="switchHistory(this,'expire')">失効</div>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-item" data-type="earn">
+        <div class="history-dot earn"></div>
+        <div class="history-info">
+          <div class="history-desc">焼肉キング 新宿店 で注文</div>
+          <div class="history-date">2026/03/14 19:32</div>
+        </div>
+        <div class="history-pts earn">+38</div>
+      </div>
+      <div class="history-item" data-type="use">
+        <div class="history-dot use"></div>
+        <div class="history-info">
+          <div class="history-desc">ポイント利用（注文 #ORD-8k3m）</div>
+          <div class="history-date">2026/03/12 12:15</div>
+        </div>
+        <div class="history-pts use">-200</div>
+      </div>
+      <div class="history-item" data-type="earn">
+        <div class="history-dot earn"></div>
+        <div class="history-info">
+          <div class="history-desc">焼肉キング 渋谷店 で注文</div>
+          <div class="history-date">2026/03/10 20:45</div>
+        </div>
+        <div class="history-pts earn">+52</div>
+      </div>
+      <div class="history-item" data-type="expire">
+        <div class="history-dot expire"></div>
+        <div class="history-info">
+          <div class="history-desc">有効期限切れによる失効</div>
+          <div class="history-date">2026/03/01 00:00</div>
+        </div>
+        <div class="history-pts expire">-80</div>
+      </div>
+      <div class="history-item" data-type="earn">
+        <div class="history-dot earn"></div>
+        <div class="history-info">
+          <div class="history-desc">焼肉キング 新宿店 で注文</div>
+          <div class="history-date">2026/02/28 18:20</div>
+        </div>
+        <div class="history-pts earn">+45</div>
+      </div>
+      <div class="history-item" data-type="earn">
+        <div class="history-dot earn"></div>
+        <div class="history-info">
+          <div class="history-desc">焼肉キング 池袋店 で注文</div>
+          <div class="history-date">2026/02/20 13:10</div>
+        </div>
+        <div class="history-pts earn">+33</div>
+      </div>
+      <div class="history-item" data-type="use">
+        <div class="history-dot use"></div>
+        <div class="history-info">
+          <div class="history-desc">ポイント利用（注文 #ORD-5n2p）</div>
+          <div class="history-date">2026/02/15 19:55</div>
+        </div>
+        <div class="history-pts use">-500</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item"><div class="nav-icon">🏠</div>ホーム</div>
+  <div class="nav-item"><div class="nav-icon">🔍</div>検索</div>
+  <div class="nav-item"><div class="nav-icon">📦</div>注文履歴</div>
+  <div class="nav-item active"><div class="nav-icon">👤</div>マイページ</div>
+</div>
+
+<script>
+function switchHistory(el, type) {
+  document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.history-item').forEach(item => {
+    if (type === 'all') {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = item.dataset.type === type ? 'flex' : 'none';
+    }
+  });
+}
+</script>
+</body>
+</html>
